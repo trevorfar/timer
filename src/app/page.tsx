@@ -27,6 +27,7 @@ const VideoBackground = () => {
     setVideoUrl(videoUrl);
   }
 
+  //@ts-ignore
   const handleKeyDown = (e) => {
     if (e.key === "Enter") {
       e.preventDefault(); 
@@ -41,7 +42,7 @@ const VideoBackground = () => {
       setPopUp(false); 
     }
   };
-  
+    //@ts-ignore
   const handleChange = (e) => {
     const { name, value } = e.target;
     if (/^\d*$/.test(value)) {
