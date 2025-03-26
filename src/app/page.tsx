@@ -2,6 +2,9 @@
 import { useState, useEffect, useRef } from "react";
 import { fetchVideo } from "@/utils/fetch";
 import Timer from "@/components/Timer";
+import ThemePopup from "@/components/ThemePopup";
+
+const themes = ["nature", "lions", "clouds", "ocean"]
 
 const VideoBackground = () => {
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
@@ -10,6 +13,7 @@ const VideoBackground = () => {
   const [iDuration, setIDuration] = useState<number>(0);
   const [popUp, setPopUp] = useState<boolean>(false);
   const [resetCount, setResetCount] = useState(0);
+  const [themePopup, setThemePopup] = useState(0);
 
 
   const minutesRef = useRef(null);
@@ -21,9 +25,13 @@ const VideoBackground = () => {
     }
   }, [popUp]);
 
-  async function findVid() {
-    const query = "nature";
+  useEffect(() => {
+    console.log("Updated video URL:", videoUrl);
+  }, [videoUrl]);
+
+  async function findVid(query: string) {
     const videoUrl = await fetchVideo({ query });
+    console.log(videoUrl)
     setVideoUrl(videoUrl);
   }
 
@@ -54,6 +62,7 @@ const VideoBackground = () => {
     <div className="relative w-full h-screen">
       {videoUrl && (
         <video
+          key={videoUrl}
           autoPlay
           loop
           muted
@@ -63,6 +72,7 @@ const VideoBackground = () => {
           <source src={videoUrl} type="video/mp4" />
         </video>
       )}
+
       {popUp && (
         <div className="fixed inset-0 flex items-center justify-center backdrop-blur-md bg-black/50 z-10">
           <div className="bg-black p-6 rounded-lg shadow-lg">
@@ -73,7 +83,7 @@ const VideoBackground = () => {
                   name="hours"
                   value={time.hours}
                   onChange={handleChange}
-                  onKeyDown={handleKeyDown} // Added here
+                  onKeyDown={handleKeyDown}
                   placeholder="HH"
                   className="w-12 text-center border rounded"
                 />
@@ -108,8 +118,9 @@ const VideoBackground = () => {
           </div>
         </div>
       )}
+      {themePopup !== 0 && <ThemePopup findVid={findVid} themes={themes} onClose={() => setThemePopup(0)}/>}
       <div className="flex flex-col z-10 top-4 right-4 absolute text-4xl text-white gap-4">
-        <button onClick={findVid} className="bg-black/50 px-4 py-2 rounded-lg">
+        <button onClick={() => setThemePopup(1)} className="bg-black/50 px-4 py-2 rounded-lg">
           Theme
         </button>
         <button
