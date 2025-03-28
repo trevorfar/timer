@@ -1,17 +1,54 @@
 import axios from "axios";
 
-export const fetchVideo = async ({query} : {query: string}) => {
-    try {
-      const PEXELS_API_KEY = process.env.NEXT_PUBLIC_PEXELS_API_KEY
-      const response = await axios.get("https://api.pexels.com/videos/search", {
+export type PexelApi = {
+  videoLink: string | null;
+  user: string | null;
+  url: string | null;
+  timeStamp?: number;
+}
+export const fetchVideo = async ({ query }: { query: number }): Promise<PexelApi> => {
+  try {
+    const PEXELS_API_KEY = process.env.NEXT_PUBLIC_PEXELS_API_KEY;
+    const response = await axios.get(
+      `https://api.pexels.com/videos/videos/${query}`,
+      {
         headers: { Authorization: PEXELS_API_KEY },
-        params: { query: query, per_page: 1 }, 
-      });
+      }
+    );
 
-      if (response.data.videos.length > 0) {
-        return response.data.videos[0].video_files[0].link
+    console.log("Full API Response:", response.data);
+
+    if (
+      !response.data ||
+      !response.data.video_files ||
+      response.data.video_files.length === 0
+    ) {
+      console.error("No video files found for this ID.");
+      return {
+        videoLink: null,
+        user: null,
+        url: null
+      };
     }
-    } catch (error) {
-      console.error("Error fetching video:", error);
+
+   
+
+    const bestVideo = response.data.video_files.reduce((max: { width: number; }, video: { width: number; }) =>
+      video.width > max.width ? video : max
+    );
+    //.data.user.name & url
+    return {
+      videoLink: bestVideo.link,
+      user: response.data.user.name,
+      url: response.data.user.url
     }
-  };
+    
+  } catch (error) {
+    console.error("Error fetching video:", error);
+    return {
+      videoLink: null,
+      user: null,
+      url: null
+    };
+  }
+};
