@@ -28,12 +28,13 @@ const themes: Theme[] = [
 ];
 
 const VideoBackground = () => {
-  const [time, setTime] = useState({ hours: "", minutes: "", seconds: "" });
+  const [time, setTime] = useState({ HH: "", MM: "", SS: "" });
   const [duration, setDuration] = useState<number>(0);
   const [popUp, setPopUp] = useState<boolean>(false);
   const [resetCount, setResetCount] = useState<number>(0);
   const [themePopup, setThemePopup] = useState<boolean>(false);
   const [currentVideo, setCurrentVideo] = useState<PexelApi>({videoLink: "", user: "", url: ""});
+
   const [videoInfo, setVideoInfo] = useState<{
     videoLink: string | null;
     user: string | null;
@@ -117,9 +118,9 @@ const VideoBackground = () => {
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
       e.preventDefault();
-      const h = parseInt(time.hours) || 0;
-      const m = parseInt(time.minutes) || 0;
-      const s = parseInt(time.seconds) || 0;
+      const h = parseInt(time.HH) || 0;
+      const m = parseInt(time.MM) || 0;
+      const s = parseInt(time.SS) || 0;
       setDuration(h * 3600 + m * 60 + s);
       setPopUp(false);
     }
@@ -157,10 +158,11 @@ const VideoBackground = () => {
                     type="text"
                     name={unit}
                     value={time[unit as keyof typeof time]}
+                    
                     onChange={handleChange}
                     onKeyDown={handleKeyDown}
                     placeholder={unit.toUpperCase()}
-                    className="w-12 text-center border rounded"
+                    className="w-12 text-center border rounded "
                     ref={idx === 1 ? minutesRef : null}
                   />
                 ))}
@@ -169,7 +171,7 @@ const VideoBackground = () => {
 
             <button
               onClick={() => setPopUp(false)}
-              className="mt-4 px-4 py-2 bg-gray-800 text-white rounded flex mx-auto"
+              className="mt-4 px-4 py-2 bg-gray-800 text-white rounded flex mx-auto cursor-pointer hover:opacity-50"
             >
               Close
             </button>
