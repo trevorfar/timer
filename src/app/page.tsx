@@ -38,27 +38,42 @@ const VideoBackground = () => {
     videoLink: string | null;
     user: string | null;
     url: string | null;
+    shouldAutoplay?: boolean;
   }>({
     videoLink: null,
     user: null,
-    url: null
+    url: null,
+    shouldAutoplay: false
   });
   
   const minutesRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     const cachedDefaultVideo = defaultVideoCache.get();
-    if(cachedDefaultVideo) {
-      setVideoInfo(cachedDefaultVideo)
-      setCurrentVideo(cachedDefaultVideo)
+    if (cachedDefaultVideo) {
+      setVideoInfo(cachedDefaultVideo);
+      setCurrentVideo(cachedDefaultVideo);
+      
+      const timer = setTimeout(() => {
+        const videoElement = document.querySelector('video');
+        if (videoElement) {
+          videoElement.muted = true;
+          videoElement.play().catch(error => {
+            console.log('Autoplay prevented:', error);
+          });
+        }
+      }, 100);
+      
+      return () => clearTimeout(timer);
     } else {
       setVideoInfo({
         videoLink: "https://videos.pexels.com/video-files/10024586/10024586-uhd_3242_2160_24fps.mp4",
         user: "taro",
-        url: "https://www.pexels.com/@taro-raptus/"
-      })
+        url: "https://www.pexels.com/@taro-raptus/",
+        shouldAutoplay: true 
+      });
     }
-  }, [])
+  }, []);
 
 
 
@@ -122,6 +137,9 @@ const VideoBackground = () => {
               muted
               playsInline
               className="absolute inset-0 w-full h-full object-cover -z-10"
+              onLoadedMetadata={(e) => {
+                e.currentTarget.play().catch(e => console.log('Autoplay error:', e));
+              }}
             >
               <source src={`${videoInfo.videoLink ? videoInfo.videoLink : null}`} type="video/mp4" />
             </video>
@@ -133,7 +151,7 @@ const VideoBackground = () => {
           <div className="bg-black p-6 rounded-lg shadow-lg">
             <div className="flex flex-col items-center gap-4">
               <div className="flex space-x-2">
-                {["hours", "minutes", "seconds"].map((unit, idx) => (
+                {["HH", "MM", "SS"].map((unit, idx) => (
                   <input
                     key={unit}
                     type="text"

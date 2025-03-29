@@ -5,6 +5,7 @@ export type PexelApi = {
   user: string | null;
   url: string | null;
   timeStamp?: number;
+  shouldAutoplay?: boolean;
 }
 export const fetchVideo = async ({ query }: { query: number }): Promise<PexelApi> => {
   try {

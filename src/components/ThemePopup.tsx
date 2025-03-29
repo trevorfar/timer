@@ -2,7 +2,6 @@
 import { PexelApi } from "@/utils/fetch";
 import { defaultVideoCache } from "@/utils/videoCache";
 import React, { useState } from "react";
-//import { motion } from "framer-motion";
 type Theme = {
   name: string;
   id: number;
@@ -24,8 +23,10 @@ const ThemePopup = ({ findVid, themes, onClose, currentVideo }: ThemePopupProps)
 
   const handleSetDefault = () => {
     if (currentVideo.videoLink) {
-      defaultVideoCache.set(currentVideo);
-    }
+      defaultVideoCache.set({
+        ...currentVideo,
+        shouldAutoplay: true 
+      });    }
   };
   
   const [currentPage, setCurrentPage] = useState(1);
