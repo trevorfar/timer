@@ -23,7 +23,7 @@ const themes: Theme[] = [
   {name: "Sparkly Water", id: 27592976},
   {name: "Winter Forest", id: 30825914},
   {name: "Fishing Village", id: 30854811},
-  {name: "city", id: 10024586}
+  {name: "City", id: 10024586}
 
 ];
 
@@ -34,6 +34,7 @@ const VideoBackground = () => {
   const [resetCount, setResetCount] = useState<number>(0);
   const [themePopup, setThemePopup] = useState<boolean>(false);
   const [currentVideo, setCurrentVideo] = useState<PexelApi>({videoLink: "", user: "", url: ""});
+  const [inputError, setInputError] = useState<string | null>(null);
 
   const [videoInfo, setVideoInfo] = useState<{
     videoLink: string | null;
@@ -76,8 +77,6 @@ const VideoBackground = () => {
     }
   }, []);
 
-
-
   useEffect(() => {
     if (popUp && minutesRef.current) {
       minutesRef.current.focus();
@@ -85,7 +84,6 @@ const VideoBackground = () => {
   }, [popUp]);
 
   const findVid = async (query: number) => {
-    
     const cached = videoCache.get(query);
     if (cached) {
       setVideoInfo({
@@ -96,7 +94,6 @@ const VideoBackground = () => {
       
       setCurrentVideo(cached)
       return
-
     }
   
     console.log('No cache found, making API request');
@@ -105,13 +102,28 @@ const VideoBackground = () => {
     setVideoInfo(video);    
     videoCache.set(query, video);
     setCurrentVideo(video)
-
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     if (/^\d*$/.test(value)) {
-      setTime((prev) => ({ ...prev, [name]: value }));
+      // Parse the input value as a number
+      const numValue = parseInt(value) || 0;
+      
+      // Validate based on the input field
+      let isValid = true;
+      if (name === "HH" && numValue > 23) isValid = false;
+      if (name === "MM" && numValue > 59) isValid = false;
+      if (name === "SS" && numValue > 59) isValid = false;
+      
+      if (isValid) {
+        setTime((prev) => ({ ...prev, [name]: value }));
+        setInputError(null);
+      } else {
+        // Set appropriate error message
+        if (name === "HH") setInputError("Hours must be between 0-23");
+        if (name === "MM" || name === "SS") setInputError("Minutes/Seconds must be between 0-59");
+      }
     }
   };
 
@@ -121,8 +133,16 @@ const VideoBackground = () => {
       const h = parseInt(time.HH) || 0;
       const m = parseInt(time.MM) || 0;
       const s = parseInt(time.SS) || 0;
+      
+      // Final validation before setting duration
+      if (h > 23 || m > 59 || s > 59) {
+        setInputError("Invalid time values. Hours: 0-23, Minutes/Seconds: 0-59");
+        return;
+      }
+      
       setDuration(h * 3600 + m * 60 + s);
       setPopUp(false);
+      setInputError(null);
     }
   };
 
@@ -158,23 +178,42 @@ const VideoBackground = () => {
                     type="text"
                     name={unit}
                     value={time[unit as keyof typeof time]}
-                    
                     onChange={handleChange}
                     onKeyDown={handleKeyDown}
                     placeholder={unit.toUpperCase()}
-                    className="w-12 text-center border rounded "
+                    className="w-12 text-center border rounded text-white"
                     ref={idx === 1 ? minutesRef : null}
+                    maxLength={2}
                   />
                 ))}
               </div>
+              {inputError && (
+                <div className="text-red-500 text-sm mt-2">
+                  {inputError}
+                </div>
+              )}
             </div>
 
             <button
-              onClick={() => setPopUp(false)}
+              onClick={() => {
+                const h = parseInt(time.HH) || 0;
+                const m = parseInt(time.MM) || 0;
+                const s = parseInt(time.SS) || 0;
+                
+                if (h > 23 || m > 59 || s > 59) {
+                  setInputError("Invalid time values. Hours: 0-23, Minutes/Seconds: 0-59");
+                  return;
+                }
+                
+                setDuration(h * 3600 + m * 60 + s);
+                setPopUp(false);
+                setInputError(null);
+              }}
               className="mt-4 px-4 py-2 bg-gray-800 text-white rounded flex mx-auto cursor-pointer hover:opacity-50"
             >
-              Close
+              Set Timer
             </button>
+            
           </div>
         </div>
       )}
@@ -206,8 +245,7 @@ const VideoBackground = () => {
         </div>
       </div>
 
-
-      <Footer user ={videoInfo.user} url={videoInfo.url}/>
+      <Footer user={videoInfo.user} url={videoInfo.url}/>
     </div>
   );
 };
