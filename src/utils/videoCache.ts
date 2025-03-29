@@ -58,3 +58,26 @@ export const videoCache = {
     }
   }
 };
+
+// utils/videoCache.ts
+export const defaultVideoCache = {
+    get(): PexelApi | null {
+      if (typeof window !== 'undefined') {
+        const cached = localStorage.getItem('defaultVideo');
+        return cached ? JSON.parse(cached) : null;
+      }
+      return null;
+    },
+  
+    set(data: PexelApi) {
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('defaultVideo', JSON.stringify(data));
+      }
+    },
+  
+    clear() {
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('defaultVideo');
+      }
+    }
+  };

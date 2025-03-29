@@ -1,10 +1,14 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
-import { fetchVideo } from "@/utils/fetch";
+import { fetchVideo, PexelApi } from "@/utils/fetch";
 import Timer from "@/components/Timer";
 import ThemePopup from "@/components/ThemePopup";
 import Footer from "@/components/Footer";
-import { videoCache } from "@/utils/videoCache";
+import { defaultVideoCache, videoCache } from "@/utils/videoCache";
+
+// If youre reading this, im kind of an idiot and didnt realize pexels literally just hosts all these videos for free whenever
+// so most of this is kind of obsolete.... You dont need to send API requests just static urls would work
+
 type Theme = {
   name: string;
   id: number;
@@ -18,7 +22,8 @@ const themes: Theme[] = [
   {name: "Country Road", id: 8965253},
   {name: "Sparkly Water", id: 27592976},
   {name: "Winter Forest", id: 30825914},
-  {name: "Fishing Village", id: 30854811}
+  {name: "Fishing Village", id: 30854811},
+  {name: "city", id: 10024586}
 
 ];
 
@@ -28,6 +33,7 @@ const VideoBackground = () => {
   const [popUp, setPopUp] = useState<boolean>(false);
   const [resetCount, setResetCount] = useState<number>(0);
   const [themePopup, setThemePopup] = useState<boolean>(false);
+  const [currentVideo, setCurrentVideo] = useState<PexelApi>({videoLink: "", user: "", url: ""});
   const [videoInfo, setVideoInfo] = useState<{
     videoLink: string | null;
     user: string | null;
@@ -37,8 +43,24 @@ const VideoBackground = () => {
     user: null,
     url: null
   });
-
+  
   const minutesRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    const cachedDefaultVideo = defaultVideoCache.get();
+    if(cachedDefaultVideo) {
+      setVideoInfo(cachedDefaultVideo)
+      setCurrentVideo(cachedDefaultVideo)
+    } else {
+      setVideoInfo({
+        videoLink: "https://videos.pexels.com/video-files/10024586/10024586-uhd_3242_2160_24fps.mp4",
+        user: "taro",
+        url: "https://www.pexels.com/@taro-raptus/"
+      })
+    }
+  }, [])
+
+
 
   useEffect(() => {
     if (popUp && minutesRef.current) {
@@ -55,14 +77,19 @@ const VideoBackground = () => {
         user: cached.user,
         url: cached.url
       });
-      return;
+      
+      setCurrentVideo(cached)
+      return
+
     }
   
     console.log('No cache found, making API request');
-    const url = await fetchVideo({ query });
+    const video = await fetchVideo({ query });
     
-    setVideoInfo(url);    
-    videoCache.set(query, url);
+    setVideoInfo(video);    
+    videoCache.set(query, video);
+    setCurrentVideo(video)
+
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -133,7 +160,7 @@ const VideoBackground = () => {
       )}
 
       {themePopup && (
-        <ThemePopup findVid={findVid} themes={themes} onClose={() => setThemePopup(false)} />
+        <ThemePopup findVid={findVid} themes={themes} onClose={() => setThemePopup(false)} currentVideo={currentVideo} />
       )}
 
       <div className="flex flex-col z-10 top-4 right-4 absolute text-3xl text-white gap-4">
