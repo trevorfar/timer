@@ -28,7 +28,7 @@ const Timer = ({ duration }: { duration: number }) => {
 
   const radius = 90;
   const circumference = 2 * Math.PI * radius;
-  const progress = duration > 0 ? (timeLeft / duration) * circumference : 0;
+  const progress = duration > 0 ? (1 - timeLeft / duration) * circumference : 0;
 
   return (
     <button
@@ -53,8 +53,9 @@ const Timer = ({ duration }: { duration: number }) => {
           stroke="white"
           strokeWidth="6"
           strokeDasharray={circumference}
-          strokeDashoffset={circumference - progress}
+          strokeDashoffset={progress}
           strokeLinecap="round"
+          transform="rotate(-90 100 100)"
           className="transition-all duration-1000 ease-linear"
         />
       </svg>
