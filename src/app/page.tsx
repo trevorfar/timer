@@ -12,6 +12,7 @@ import { defaultVideoCache, videoCache } from "@/utils/videoCache";
 type Theme = {
   name: string;
   id: number;
+  directLink?: string;
 }
 const themes: Theme[] = [
   {name: "Highway", id: 31315701},
@@ -23,8 +24,8 @@ const themes: Theme[] = [
   {name: "Sparkly Water", id: 27592976},
   {name: "Winter Forest", id: 30825914},
   {name: "Fishing Village", id: 30854811},
-  {name: "City", id: 10024586}
-
+  {name: "City", id: 10024586}, 
+  {name: "Subway Surfer", id: NaN, directLink: "https://ia601307.us.archive.org/35/items/subway_surfer/subway_surfer.mp4"}
 ];
 
 const VideoBackground = () => {
@@ -83,7 +84,22 @@ const VideoBackground = () => {
     }
   }, [popUp]);
 
-  const findVid = async (query: number) => {
+  const findVid = async (query: number | string) => {
+
+    if (typeof query === 'string') {
+      setVideoInfo({
+        videoLink: query,
+        user: "Trevor Farias", 
+        url: "https://archive.org/details/@trevorof"
+      });
+      setCurrentVideo({
+        videoLink: query,
+        user: "Trevor Farias",
+        url: "https://archive.org/details/@trevorof"
+      });
+      return;
+    }
+
     const cached = videoCache.get(query);
     if (cached) {
       setVideoInfo({
@@ -95,6 +111,8 @@ const VideoBackground = () => {
       setCurrentVideo(cached)
       return
     }
+
+   
   
     console.log('No cache found, making API request');
     const video = await fetchVideo({ query });
@@ -107,10 +125,8 @@ const VideoBackground = () => {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     if (/^\d*$/.test(value)) {
-      // Parse the input value as a number
       const numValue = parseInt(value) || 0;
       
-      // Validate based on the input field
       let isValid = true;
       if (name === "HH" && numValue > 23) isValid = false;
       if (name === "MM" && numValue > 59) isValid = false;
@@ -120,7 +136,6 @@ const VideoBackground = () => {
         setTime((prev) => ({ ...prev, [name]: value }));
         setInputError(null);
       } else {
-        // Set appropriate error message
         if (name === "HH") setInputError("Hours must be between 0-23");
         if (name === "MM" || name === "SS") setInputError("Minutes/Seconds must be between 0-59");
       }

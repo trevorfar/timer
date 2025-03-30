@@ -2,40 +2,42 @@
 import { PexelApi } from "@/utils/fetch";
 import { defaultVideoCache } from "@/utils/videoCache";
 import React, { useState } from "react";
+
 type Theme = {
   name: string;
   id: number;
+  directLink?: string;
 };
 
 interface ThemePopupProps {
   themes: Theme[];
-  findVid: (theme: number) => void;
+  findVid: (query: number | string) => void; // Updated to accept string for direct links
   onClose: () => void;
   currentVideo: PexelApi;
-
 }
-
-
 
 const ITEMS = 6;
 
 const ThemePopup = ({ findVid, themes, onClose, currentVideo }: ThemePopupProps) => {
-
   const handleSetDefault = () => {
     if (currentVideo.videoLink) {
       defaultVideoCache.set({
         ...currentVideo,
         shouldAutoplay: true 
-      });    }
+      });
+    }
   };
   
   const [currentPage, setCurrentPage] = useState(1);
-  const [selectedThemeId, setSelectedThemeId] = useState<number | null>(null);
+  const [selectedThemeId, setSelectedThemeId] = useState<number | string | null>(null);
 
-  const handleThemeClick = (themeId: number) => {
-    if (themeId !== selectedThemeId) {
-      setSelectedThemeId(themeId);
-      findVid(themeId);
+  const handleThemeClick = (theme: Theme) => {
+    if (theme.directLink && theme.directLink !== selectedThemeId) {
+      setSelectedThemeId(theme.directLink);
+      findVid(theme.directLink); // Pass the direct link string
+    } else if (theme.id !== selectedThemeId) {
+      setSelectedThemeId(theme.id);
+      findVid(theme.id); // Pass the numeric ID as before
     }
   };
 
@@ -50,34 +52,34 @@ const ThemePopup = ({ findVid, themes, onClose, currentVideo }: ThemePopupProps)
           className="absolute top-2 right-2 text-white bg-gray-800 rounded-2xl p-2 cursor-pointer hover:opacity-50"
           onClick={(e) => {
             e.stopPropagation();
-            onClose()
-            
-          }
-          }
+            onClose();
+          }}
         >
           ✕
         </button>
         <div className="flex flex-col gap-2 p-4 cursor-pointer">
           {paginatedThemes.map((theme) => (
-
             <button
               key={theme.id}
-              onClick={() => {
-                 handleThemeClick(theme.id)}
-              }
-              className="bg-gray-700 text-white px-4 py-2 rounded cursor-pointer hover:opacity-50"
+              onClick={() => handleThemeClick(theme)}
+              className={`bg-gray-700 text-white px-4 py-2 rounded cursor-pointer hover:opacity-50 ${
+                (theme.directLink && selectedThemeId === theme.directLink) || 
+                (!theme.directLink && selectedThemeId === theme.id)
+                  ? "ring-2 ring-blue-500"
+                  : ""
+              }`}
             >
               {theme.name}
             </button>
           ))}
         </div>
         {currentVideo && (
-                  <button
-                    onClick={handleSetDefault}
-                    className="w-full py-2 bg-blue-600 text-white rounded hover:bg-blue-500 cursor-pointer"
-                  >
-                    Set Current Video as Default
-                  </button>
+          <button
+            onClick={handleSetDefault}
+            className="w-full py-2 bg-blue-600 text-white rounded hover:bg-blue-500 cursor-pointer"
+          >
+            Set Current Video as Default
+          </button>
         )}
         <div className="flex justify-between mt-4">
           <button

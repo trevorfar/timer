@@ -10,7 +10,7 @@ const Footer = ({ user, url }: { user: string | null; url: string | null }) => {
               rel="noopener noreferrer"
               className="underline hover:opacity-80"
             >
-              View on Pexels
+              View Author 
             </a>
           )}
         </div>
