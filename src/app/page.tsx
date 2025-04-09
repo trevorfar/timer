@@ -27,7 +27,13 @@ const themes: Theme[] = [
   {name: "City", id: 10024586}, 
   {name: "Subway Surfer", id: NaN, directLink: "https://ia601307.us.archive.org/35/items/subway_surfer/subway_surfer.mp4"},
   {name: "Ducks", id:30510515},
-  {name: "Starry Night", id:857134}
+  {name: "Starry Night", id:857134},
+  {name: "Receding Waves", id:1321208},
+  {name: "Rocky River", id:5896379},
+  {name: "Trippy Tunnel", id:2759477},
+  {name: "Colorful Forest", id:3217937},
+  {name: "Waterfall", id:7297870},
+  {name: "Storm Castle", id:4167691}
 ];
 
 const VideoBackground = () => {
