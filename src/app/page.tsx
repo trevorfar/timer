@@ -44,7 +44,15 @@ const VideoBackground = () => {
   const [themePopup, setThemePopup] = useState<boolean>(false);
   const [currentVideo, setCurrentVideo] = useState<PexelApi>({videoLink: "", user: "", url: ""});
   const [inputError, setInputError] = useState<string | null>(null);
+  const [pomo, setPomo] = useState<boolean>(false);
+  const [isBreak, setIsBreak] = useState(false);  
+  
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+  //@ts-ignore 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [intervalId, setIntervalId] = useState<NodeJS.Timer | null>(null); 
 
+  const breakDuration = 300;
   const [videoInfo, setVideoInfo] = useState<{
     videoLink: string | null;
     user: string | null;
@@ -57,6 +65,11 @@ const VideoBackground = () => {
     shouldAutoplay: false
   });
   
+  const setPomodoro = () => {
+    setDuration(1500);
+    setPomo(true);
+    setIsBreak(false);
+  }
   const minutesRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
@@ -85,6 +98,33 @@ const VideoBackground = () => {
       });
     }
   }, []);
+
+  useEffect(() => {
+    if ((pomo || isBreak) && duration > 0) {
+      const id = setInterval(() => {
+        setDuration((prevDuration) => prevDuration - 1);
+      }, 1000); // Decrease every second
+      setIntervalId(id); // Store interval ID to clear later
+
+      return () => clearInterval(id); // Cleanup the interval on component unmount or change
+    }
+    return;
+  }, [pomo, isBreak, duration]); // This will handle both Pomodoro and break countdowns
+
+  // Check for timer completion and transition to break or back to Pomodoro
+  useEffect(() => {
+    if (duration === 0 && pomo) {
+      // When Pomodoro timer finishes, switch to break
+      setDuration(breakDuration); // Set break to 5 minutes
+      setIsBreak(true); // It's break time now
+      setPomo(false); // End Pomodoro cycle
+    } else if (duration === 0 && isBreak) {
+      // When break finishes, go back to Pomodoro
+      setDuration(1500); // Set Pomodoro to 25 minutes
+      setIsBreak(false); // End break time
+      setPomo(true); // Start Pomodoro again
+    }
+  }, [duration, pomo, isBreak, breakDuration]);
 
   useEffect(() => {
     if (popUp && minutesRef.current) {
@@ -246,6 +286,8 @@ const VideoBackground = () => {
       )}
 
       <div className="flex flex-col z-10 top-4 right-4 absolute text-3xl text-white gap-4">
+
+        <button onClick={()=> setPomodoro()} className="bg-black/50 px-4 py-2 rounded-lg hover:opacity-45 cursor-pointer">Pomodoro</button>
         <button onClick={() => setThemePopup(true)} className="bg-black/50 px-4 py-2 rounded-lg hover:opacity-45 cursor-pointer">
           Theme
         </button>
