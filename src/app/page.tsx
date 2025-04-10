@@ -66,9 +66,9 @@ const VideoBackground = () => {
   });
   
   const setPomodoro = () => {
-    setDuration(1500);
-    setPomo(true);
-    setIsBreak(false);
+    // setDuration(1500);
+    // setPomo(true);
+    // setIsBreak(false);
   }
   const minutesRef = useRef<HTMLInputElement | null>(null);
 
