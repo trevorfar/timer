@@ -44,6 +44,8 @@ const VideoBackground = () => {
   const [inputError, setInputError] = useState<string | null>(null);
   const [pomo, setPomo] = useState<boolean>(false); // This tracks Pomodoro mode status
   const [isBreak, setIsBreak] = useState<boolean>(false);
+//@ts-nocheck  
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [intervalId, setIntervalId] = useState<NodeJS.Timer | null>(null);
 
   const breakDuration = 3; // Break duration in minutes
