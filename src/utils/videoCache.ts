@@ -1,9 +1,10 @@
-import { PexelApi } from "./fetch";
+import { PexelApi } from "./types";
 
 type CachedVideo = {
   videoLink: string;
   user: string;
   url: string;
+  id: number;
   timestamp: number;
 };
 
@@ -18,7 +19,6 @@ export const videoCache = {
     if (typeof window !== 'undefined') {
       try {
         const cache = localStorage.getItem('videoCache');
-        console.log('Loaded cache from localStorage:', cache);
         return cache ? JSON.parse(cache) : {};
       } catch (error) {
         console.error('Error reading cache:', error);
@@ -37,6 +37,15 @@ export const videoCache = {
     return null;
   },
 
+  // getByLink(link: string): CachedVideo | null {
+  //   const item = this.cache[id];
+  //   console.log('Checking cache for ID:', id, 'Found:', item);
+  //   if (item && Date.now() - item.timestamp < CACHE_EXPIRY) {
+  //     return item;
+  //   }
+  //   return null;
+  // },
+
   set(id: number, data: PexelApi) {
     if (!data.videoLink || !data.user || !data.url) {
       console.warn('Not caching incomplete data for ID:', id);
@@ -49,6 +58,7 @@ export const videoCache = {
         videoLink: data.videoLink,
         user: data.user,
         url: data.url,
+        id: id,
         timestamp: Date.now()
       };
       localStorage.setItem('videoCache', JSON.stringify(cache));
@@ -59,7 +69,6 @@ export const videoCache = {
   }
 };
 
-// utils/videoCache.ts
 export const defaultVideoCache = {
     get(): PexelApi | null {
       if (typeof window !== 'undefined') {

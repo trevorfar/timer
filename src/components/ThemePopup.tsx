@@ -1,5 +1,5 @@
 "use client";
-import { PexelApi } from "@/utils/fetch";
+import { PexelApi } from "@/utils/types";
 import { defaultVideoCache } from "@/utils/videoCache";
 import React, { useState } from "react";
 
@@ -11,7 +11,7 @@ type Theme = {
 
 interface ThemePopupProps {
   themes: Theme[];
-  findVid: (query: number | string) => void; // Updated to accept string for direct links
+  findVid: (id: number | string) => void;
   onClose: () => void;
   currentVideo: PexelApi;
 }
@@ -32,13 +32,13 @@ const ThemePopup = ({ findVid, themes, onClose, currentVideo }: ThemePopupProps)
   const [selectedThemeId, setSelectedThemeId] = useState<number | string | null>(null);
 
   const handleThemeClick = (theme: Theme) => {
-    if (theme.directLink && theme.directLink !== selectedThemeId) {
-      setSelectedThemeId(theme.directLink);
-      findVid(theme.directLink); // Pass the direct link string
-    } else if (theme.id !== selectedThemeId) {
-      setSelectedThemeId(theme.id);
-      findVid(theme.id); // Pass the numeric ID as before
+    const newId = theme.directLink ?? theme.id;
+    if (newId !== selectedThemeId) {
+      setSelectedThemeId(newId);
+      findVid(newId);
     }
+    console.log("User selected theme:", theme.name, "with", theme.directLink ?? theme.id);
+
   };
 
   const totalPages = Math.ceil(themes.length / ITEMS);

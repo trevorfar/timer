@@ -1,67 +1,72 @@
 "use client";
-import { useEffect, useState } from "react";
+import React from "react";
 
-const Timer = ({ duration }: { duration: number }) => {
-  const [timeLeft, setTimeLeft] = useState(duration);
-  const [isRunning, setIsRunning] = useState(true);
-
-  useEffect(() => {
-    setTimeLeft(duration);
-    setIsRunning(false)
-  }, [duration]);
-
-  useEffect(() => {
-    if (!isRunning || timeLeft <= 0) return;
-
-    const timer = setInterval(() => {
-      setTimeLeft((prev) => Math.max(prev - 1, 0));
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, [isRunning, timeLeft]);
-
-  const formatTime = (duration: number) => {
-    const minutes = Math.floor(duration / 60);
-    const seconds = duration % 60;
-    return `${minutes}:${seconds < 10 ? "0" : ""}${seconds}`;
+interface TimerProps {
+  time: {
+    hours: number;
+    minutes: number;
+    seconds: number;
   };
+  timeLeft: number;
+  totalDuration: number;
+  isRunning: boolean;
+  onStartPause: () => void;
+  onReset: () => void;
+}
+
+const Timer: React.FC<TimerProps> = ({
+  time,
+  timeLeft,
+  totalDuration,
+  onStartPause,
+  onReset,
+}) => {
+  const format = (n: number) => n.toString().padStart(2, "0");
+  const formatted = `${format(time.hours)}:${format(time.minutes)}:${format(time.seconds)}`;
 
   const radius = 90;
   const circumference = 2 * Math.PI * radius;
-  const progress = duration > 0 ? (1 - timeLeft / duration) * circumference : 0;
+  const progress = totalDuration > 0 ? (1 - timeLeft / totalDuration) * circumference : 0;
 
   return (
-    <button
-      className="relative flex items-center justify-center cursor-pointer w-[240px] h-[240px] rounded-full bg-black/50 hover:opacity-50"
-      onClick={() => setIsRunning((prev) => !prev)}
-    >
-      <svg width="240" height="240" viewBox="0 0 200 200" className="absolute">
-        <circle
-          cx="100"
-          cy="100"
-          r={radius}
-          fill="none"
-          stroke="gray"
-          strokeWidth="6"
-          opacity="0.3"
-        />
-        <circle
-          cx="100"
-          cy="100"
-          r={radius}
-          fill="none"
-          stroke="white"
-          strokeWidth="6"
-          strokeDasharray={circumference}
-          strokeDashoffset={progress}
-          strokeLinecap="round"
-          transform="rotate(-90 100 100)"
-          className="transition-all duration-1000 ease-linear"
-        />
-      </svg>
+    <div className="flex flex-col items-center space-y-4">
+      <button
+        onClick={onStartPause}
+        className="relative flex items-center justify-center w-[240px] h-[240px] rounded-full bg-black/50 hover:opacity-50"
+      >
+        <svg width="240" height="240" viewBox="0 0 200 200" className="absolute">
+          <circle
+            cx="100"
+            cy="100"
+            r={radius}
+            fill="none"
+            stroke="gray"
+            strokeWidth="6"
+            opacity="0.3"
+          />
+          <circle
+            cx="100"
+            cy="100"
+            r={radius}
+            fill="none"
+            stroke="white"
+            strokeWidth="6"
+            strokeDasharray={circumference}
+            strokeDashoffset={progress}
+            strokeLinecap="round"
+            transform="rotate(-90 100 100)"
+            className="transition-all duration-1000 ease-linear"
+          />
+        </svg>
+        <span className="text-5xl text-white">{formatted}</span>
+      </button>
 
-      <p className="text-5xl text-white">{formatTime(timeLeft)}</p>
-    </button>
+      <div className="flex gap-4">
+        <button onClick={onReset} className="px-4 py-2 bg-gray-700 text-white rounded hover:opacity-75">
+          Reset
+        </button>
+      </div>
+    </div>
   );
 };
 
