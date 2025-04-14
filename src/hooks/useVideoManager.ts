@@ -74,6 +74,8 @@ export function useVideoManager() {
   return {
     currentTheme: videoInfo,
     videoUrl: videoInfo?.videoLink ?? null,
+    author: videoInfo?.user ?? null,
+    authorUrl: videoInfo?.url ?? null,
     selectTheme,
     fetchAndSetVideo,
   };

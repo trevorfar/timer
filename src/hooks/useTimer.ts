@@ -24,7 +24,19 @@ export function useTimer(initialSeconds: number, options: UseTimerOptions = {}) 
   }, [timeLeft]);
 
   const start = () => {
-    if (!isRunning) setIsRunning(true);
+    if (timeLeft <= 0) return;
+    clearTimerInterval(); 
+    intervalRef.current = setInterval(() => {
+      setTimeLeft(prev => {
+        if (prev <= 1) {
+          clearTimerInterval();
+          if (onComplete) onComplete();  
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    setIsRunning(true);
   };
 
   const pause = () => {

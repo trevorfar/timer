@@ -25,7 +25,7 @@ const TimerPopup: React.FC<TimerPopupProps> = ({
   setInputError,
   inputError,
   minutesRef,
-  onClose
+  onClose,
 }) => {
   const { closeModal } = useModal();
 
@@ -39,7 +39,7 @@ const TimerPopup: React.FC<TimerPopupProps> = ({
   const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
       submitTime();
-      onClose()
+      onClose();
     }
   };
 
@@ -61,13 +61,25 @@ const TimerPopup: React.FC<TimerPopupProps> = ({
 
     setDuration(totalSeconds);
     closeModal();
+    onClose();
     setInputError(null);
   };
 
   return (
     <div className="fixed inset-0 flex items-center justify-center backdrop-blur-md bg-black/50 z-10">
       <div className="bg-black p-6 rounded-lg shadow-lg w-[300px]">
-        <h2 className="text-white text-lg font-semibold mb-4 text-center">Set Timer</h2>
+        <button
+          className=" top-2 right-2 text-white bg-gray-800 rounded-2xl p-2 cursor-pointer hover:opacity-50"
+          onClick={(e) => {
+            e.stopPropagation();
+            onClose();
+          }}
+        >
+          X
+        </button>
+        <h2 className="text-white text-lg font-semibold mb-4 text-center ">
+          Set Timer
+        </h2>
         <div className="flex flex-col items-center gap-4">
           <div className="flex space-x-2">
             {(["HH", "MM", "SS"] as const).map((unit, idx) => (
@@ -84,20 +96,14 @@ const TimerPopup: React.FC<TimerPopupProps> = ({
               />
             ))}
           </div>
-          {inputError && <div className="text-red-500 text-sm">{inputError}</div>}
+          {inputError && (
+            <div className="text-red-500 text-sm">{inputError}</div>
+          )}
         </div>
-        <button
-          className="absolute top-2 right-2 text-white bg-gray-800 rounded-2xl p-2 cursor-pointer hover:opacity-50"
-          onClick={(e) => {
-            e.stopPropagation();
-            onClose();
-          }}
-        >
-          ✕
-        </button>
+
         <button
           onClick={submitTime}
-          className="mt-6 w-full px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-500 transition"
+          className="mt-6 w-full px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-500 transition cursor-pointer"
         >
           Set Timer
         </button>
