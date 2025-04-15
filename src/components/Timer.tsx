@@ -1,14 +1,26 @@
 "use client";
 import { useEffect, useState } from "react";
 
-const Timer = ({ duration }: { duration: number }) => {
+interface TimerProps {
+  duration: number;
+  onRunningChange?: (running: boolean) => void;
+}
+
+const Timer = ({ duration, onRunningChange }: TimerProps) => {
   const [timeLeft, setTimeLeft] = useState(duration);
   const [isRunning, setIsRunning] = useState(true);
 
   useEffect(() => {
     setTimeLeft(duration);
-    setIsRunning(false)
+    setIsRunning(false);
   }, [duration]);
+
+  useEffect(() => {
+    // Inform parent of state change
+    if (onRunningChange) {
+      onRunningChange(isRunning);
+    }
+  }, [isRunning, onRunningChange]);
 
   useEffect(() => {
     if (!isRunning || timeLeft <= 0) return;
@@ -33,7 +45,7 @@ const Timer = ({ duration }: { duration: number }) => {
   return (
     <button
       className="relative flex items-center justify-center cursor-pointer w-[240px] h-[240px] rounded-full bg-black/50 hover:opacity-50"
-      onClick={() => setIsRunning((prev) => !prev)}
+      onClick={() => timeLeft == 0 ? () => {}: setIsRunning((prev) => !prev)}
     >
       <svg width="240" height="240" viewBox="0 0 200 200" className="absolute">
         <circle

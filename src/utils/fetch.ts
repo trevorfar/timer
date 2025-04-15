@@ -31,13 +31,13 @@ export const fetchVideo = async ({ query }: { query: number }): Promise<PexelApi
         url: null
       };
     }
-
    
+    const bestVideo = response.data.video_files.find(
+      (video: { width: number; file_type: string; }) =>
+        video.width >= 1920 &&
+        video.file_type === "video/mp4"
+    ) || response.data.video_files[0];
 
-    const bestVideo = response.data.video_files.reduce((max: { width: number; }, video: { width: number; }) =>
-      video.width > max.width ? video : max
-    );
-    //.data.user.name & url
     return {
       videoLink: bestVideo.link,
       user: response.data.user.name,

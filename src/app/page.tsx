@@ -42,14 +42,8 @@ const VideoBackground = () => {
   const [themePopup, setThemePopup] = useState<boolean>(false);
   const [currentVideo, setCurrentVideo] = useState<PexelApi>({ videoLink: "", user: "", url: "" });
   const [inputError, setInputError] = useState<string | null>(null);
-  const [pomo, setPomo] = useState<boolean>(false); // This tracks Pomodoro mode status
-  const [isBreak, setIsBreak] = useState<boolean>(false);
-//@ts-nocheck  
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [intervalId, setIntervalId] = useState<NodeJS.Timer | null>(null);
+  const [isRunning, setIsRunning] = useState<boolean>(false);
 
-  const breakDuration = 3; // Break duration in minutes
-  const pomodoro_duration = 25; // Pomodoro duration in minutes
   const [videoInfo, setVideoInfo] = useState<{
     videoLink: string | null;
     user: string | null;
@@ -63,22 +57,6 @@ const VideoBackground = () => {
   });
 
   const minutesRef = useRef<HTMLInputElement | null>(null);
-
-  // Timer toggle: Activate Pomodoro or regular clock
-  const togglePomodoro = () => {
-    if (pomo) {
-      // If Pomodoro mode is active, switch to regular clock
-      setPomo(false);
-      setDuration(0); // Set the regular clock to 0 seconds
-    } else {
-      // Otherwise, set Pomodoro mode
-      setDuration(pomodoro_duration * 60); // Convert Pomodoro duration to seconds
-      setPomo(true);
-      setIsBreak(false); // Ensure it's not in break mode
-    }
-  };
-
-  // Video setup on initial load or cache retrieval
   useEffect(() => {
     const cachedDefaultVideo = defaultVideoCache.get();
     if (cachedDefaultVideo) {
@@ -101,33 +79,6 @@ const VideoBackground = () => {
       });
     }
   }, []);
-
-  // Timer logic: Clear and set intervals for Pomodoro and Break
-  useEffect(() => {
-    if ((pomo || isBreak) && duration > 0) {
-      const id = setInterval(() => {
-        setDuration((prevDuration) => prevDuration - 1);
-      }, 1000);
-      setIntervalId(id);
-
-      return () => clearInterval(id);
-    }
-
-    return () => {}; // No-op cleanup for timer reset
-  }, [pomo, isBreak, duration]);
-
-  // Pomodoro and Break switching logic
-  useEffect(() => {
-    if (duration === 0 && pomo) {
-      setDuration(breakDuration * 60); // Set break duration in seconds
-      setIsBreak(true);
-      setPomo(false);
-    } else if (duration === 0 && isBreak) {
-      setDuration(pomodoro_duration * 60); // Set Pomodoro duration in seconds
-      setIsBreak(false);
-      setPomo(true);
-    }
-  }, [duration, pomo, isBreak]);
 
   // Focus on input when popup is open
   useEffect(() => {
@@ -171,7 +122,6 @@ const VideoBackground = () => {
     setCurrentVideo(video);
   };
 
-  // Handle time input change with validation
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     if (/^\d*$/.test(value)) {
@@ -190,7 +140,6 @@ const VideoBackground = () => {
     }
   };
 
-  // Handle keydown to submit time input
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
       e.preventDefault();
@@ -208,6 +157,8 @@ const VideoBackground = () => {
       setInputError(null);
     }
   };
+
+
 
   return (
     <div className="relative flex flex-col min-h-screen w-full">
@@ -229,8 +180,16 @@ const VideoBackground = () => {
         )}
 
         {popUp && (
-          <div className="fixed inset-0 flex items-center justify-center backdrop-blur-md bg-black/50 z-10">
-            <div className="bg-black p-6 rounded-lg shadow-lg">
+            <div className="fixed inset-0 flex items-center justify-center backdrop-blur-md bg-black/50 z-10">
+              <div className="relative bg-black p-6 rounded-lg shadow-lg w-[300px]">
+                <button
+                  onClick={() => setPopUp(false)}
+                  className="absolute top-2 right-2 text-white text-xl hover:text-red-500 transition cursor-pointer"
+                  aria-label="Close"
+                >
+                  &times;
+                </button>
+          
               <div className="flex flex-col items-center gap-4">
                 <div className="flex space-x-2">
                   {["HH", "MM", "SS"].map((unit, idx) => (
@@ -278,10 +237,7 @@ const VideoBackground = () => {
           <ThemePopup findVid={findVid} themes={themes} onClose={() => setThemePopup(false)} currentVideo={currentVideo} />
         )}
 
-        <div className="flex flex-col z-10 top-4 right-4 absolute text-3xl text-white gap-4">
-          <button onClick={togglePomodoro} className="bg-black/50 px-4 py-2 rounded-lg hover:opacity-45 cursor-pointer">
-            {pomo ? "Stop Pomodoro" : "Start Pomodoro"}
-          </button>
+        {!isRunning && (<div className="flex flex-col z-10 top-4 right-4 absolute text-3xl text-white gap-4">
           <button onClick={() => setThemePopup(true)} className="bg-black/50 px-4 py-2 rounded-lg hover:opacity-45 cursor-pointer">Theme</button>
           <button onClick={() => setPopUp(true)} className="bg-black/50 px-4 py-2 rounded-lg hover:opacity-45 cursor-pointer">Time</button>
           <button
@@ -293,10 +249,10 @@ const VideoBackground = () => {
           >
             Reset
           </button>
-        </div>
+        </div>)}
 
         <div className="absolute inset-0 flex items-center justify-center">
-          <Timer key={`${duration}-${resetCount}`} duration={duration} />
+          <Timer key={`${duration}-${resetCount}`} duration={duration} onRunningChange={setIsRunning}/>
         </div>
       </div>
 
