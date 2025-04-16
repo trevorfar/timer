@@ -23,7 +23,10 @@ const Timer = ({ duration, onRunningChange }: TimerProps) => {
   }, [isRunning, onRunningChange]);
 
   useEffect(() => {
-    if (!isRunning || timeLeft <= 0) return;
+    if (!isRunning || timeLeft <= 0){ 
+      setIsRunning(false);
+      return;
+    }
 
     const timer = setInterval(() => {
       setTimeLeft((prev) => Math.max(prev - 1, 0));
