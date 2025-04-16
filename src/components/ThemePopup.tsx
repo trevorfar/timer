@@ -45,6 +45,22 @@ const ThemePopup = ({ findVid, themes, onClose, currentVideo }: ThemePopupProps)
   const startIndex = (currentPage - 1) * ITEMS;
   const paginatedThemes = themes.slice(startIndex, startIndex + ITEMS);
 
+  const shuffleTheme = () => {
+    if (themes.length === 0) return;
+  
+    // Filter out the currently selected theme so we don’t repeat
+    const availableThemes = themes.filter((theme) =>
+      theme.directLink
+        ? theme.directLink !== selectedThemeId
+        : theme.id !== selectedThemeId
+    );
+  
+    const randomIndex = Math.floor(Math.random() * availableThemes.length);
+    const randomTheme = availableThemes[randomIndex];
+  
+    handleThemeClick(randomTheme);
+  };
+
   return (
     <div className="fixed inset-0 flex items-center justify-center backdrop-blur-md bg-black/50 z-15">
       <div className="bg-black p-6 rounded-lg shadow-lg relative w-80">
@@ -57,8 +73,11 @@ const ThemePopup = ({ findVid, themes, onClose, currentVideo }: ThemePopupProps)
         >
           ✕
         </button>
+       
         <div className="flex flex-col gap-2 p-4 cursor-pointer">
+        
           {paginatedThemes.map((theme) => (
+            
             <button
               key={theme.id}
               onClick={() => handleThemeClick(theme)}
@@ -73,6 +92,7 @@ const ThemePopup = ({ findVid, themes, onClose, currentVideo }: ThemePopupProps)
             </button>
           ))}
         </div>
+        <div className="flex flex-col items-center justify-center gap-1">
         {currentVideo && (
           <button
             onClick={handleSetDefault}
@@ -80,7 +100,12 @@ const ThemePopup = ({ findVid, themes, onClose, currentVideo }: ThemePopupProps)
           >
             Set Current Video as Default
           </button>
+          
         )}
+        <button onClick={() => shuffleTheme()}className="bg-gray-700 text-white px-4 py-2 rounded cursor-pointer hover:opacity-50 w-2/3 justify-center items-center">
+          Shuffle
+        </button>
+        </div>
         <div className="flex justify-between mt-4">
           <button
             className={`px-3 py-1 text-white bg-gray-800 rounded ${
