@@ -1,7 +1,7 @@
 import { Theme } from "./types";
 
 export const themes: Theme[] = [
-  {name: "Snoopy", id: NaN, directLink: "https://ia600506.us.archive.org/26/items/snoopy_complete/snoopy_complete.mp4"},
+  { name: "Snoopy", id: NaN, directLink: "https://ia600506.us.archive.org/26/items/snoopy_complete/snoopy_complete.mp4"},
   { name: "Highway", id: 31315701 },
   { name: "Coastal Cliffs", id: 30457635 },
   { name: "Hot Air Balloons", id: 30707440 },
