@@ -199,39 +199,40 @@ const VideoBackground = () => {
                           const max = unit === "HH" ? 23 : 59;
                           const min = 0;
                           const inputEl = e.currentTarget;
-
+                        
+                          const STEP_PX = 5; // controls sensitivity: 5px per value change
+                          const MAX_DRAG = 40; // visual limit only
+                        
+                          let currentVisualOffset = 0;
+                        
                           const handleMouseMove = (e: MouseEvent) => {
-                            const deltaY = e.clientY - startY;
-                            inputEl.style.transform = `translateY(${deltaY}px)`;
-
-                            const deltaSteps = Math.floor(-deltaY / 5); // 5px per unit
+                            const dragY = e.clientY - startY;
+                            const deltaSteps = Math.floor(-dragY / STEP_PX); // dragging up = increase
                             let newValue = initialValue + deltaSteps;
+                        
+                            // Clamp value to valid bounds (not visual)
                             newValue = Math.max(min, Math.min(max, newValue));
-
                             setTime((prev) => ({
                               ...prev,
                               [unit]: newValue.toString().padStart(2, "0"),
                             }));
+                        
+                            // Clamp visual movement only
+                            currentVisualOffset = Math.max(-MAX_DRAG, Math.min(MAX_DRAG, dragY));
+                            inputEl.style.transform = `translateY(${currentVisualOffset}px)`;
                           };
-
+                        
                           const handleMouseUp = () => {
-                            inputEl.style.transform = ""; // reset position
-                            document.removeEventListener(
-                              "mousemove",
-                              handleMouseMove
-                            );
-                            document.removeEventListener(
-                              "mouseup",
-                              handleMouseUp
-                            );
+                            inputEl.style.transform = ""; // reset to original
+                            document.removeEventListener("mousemove", handleMouseMove);
+                            document.removeEventListener("mouseup", handleMouseUp);
                           };
-
-                          document.addEventListener(
-                            "mousemove",
-                            handleMouseMove
-                          );
+                        
+                          document.addEventListener("mousemove", handleMouseMove);
                           document.addEventListener("mouseup", handleMouseUp);
                         }}
+                        
+                        
                       />
                     </div>
                   ))}
