@@ -83,17 +83,29 @@ const TimerPopup: React.FC<TimerPopupProps> = ({
         <div className="flex flex-col items-center gap-4">
           <div className="flex space-x-2">
             {(["HH", "MM", "SS"] as const).map((unit, idx) => (
-              <input
-                key={unit}
-                name={unit}
-                value={time[unit]}
-                onChange={handleChange}
-                onKeyDown={handleKeyDown}
-                placeholder={unit}
-                className="w-12 text-center border border-gray-400 rounded bg-gray-900 text-white"
-                ref={idx === 1 ? minutesRef : null}
-                maxLength={2}
-              />
+              <div key={unit} className="flex flex-col items-center space-y-2">
+                <input
+                  name={unit}
+                  value={time[unit]}
+                  onChange={handleChange}
+                  onKeyDown={handleKeyDown}
+                  placeholder={unit}
+                  className="w-12 text-center border border-gray-400 rounded bg-gray-900 text-white"
+                  ref={idx === 1 ? minutesRef : null}
+                  maxLength={2}
+                />
+                <input
+                  type="range"
+                  min={0}
+                  max={unit === "HH" ? 23 : 59}
+                  value={parseInt(time[unit]) || 0}
+                  onChange={(e) => {
+                    const value = e.target.value.padStart(2, "0");
+                    setTime((prev) => ({ ...prev, [unit]: value }));
+                  }}
+                  className="w-12"
+                />
+              </div>
             ))}
           </div>
           {inputError && (

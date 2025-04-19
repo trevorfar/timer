@@ -5,9 +5,7 @@ import Timer from "@/components/Timer";
 import ThemePopup from "@/components/ThemePopup";
 import Footer from "@/components/Footer";
 import { defaultVideoCache, videoCache } from "@/utils/videoCache";
-import { themes } from '../utils/themes'
-
-
+import { themes } from "../utils/themes";
 
 const VideoBackground = () => {
   const [time, setTime] = useState({ HH: "", MM: "", SS: "" });
@@ -15,7 +13,11 @@ const VideoBackground = () => {
   const [popUp, setPopUp] = useState<boolean>(false);
   const [resetCount, setResetCount] = useState<number>(0);
   const [themePopup, setThemePopup] = useState<boolean>(false);
-  const [currentVideo, setCurrentVideo] = useState<PexelApi>({ videoLink: "", user: "", url: "" });
+  const [currentVideo, setCurrentVideo] = useState<PexelApi>({
+    videoLink: "",
+    user: "",
+    url: "",
+  });
   const [inputError, setInputError] = useState<string | null>(null);
   const [isRunning, setIsRunning] = useState<boolean>(false);
 
@@ -28,7 +30,7 @@ const VideoBackground = () => {
     videoLink: null,
     user: null,
     url: null,
-    shouldAutoplay: false
+    shouldAutoplay: false,
   });
 
   const minutesRef = useRef<HTMLInputElement | null>(null);
@@ -38,19 +40,22 @@ const VideoBackground = () => {
       setVideoInfo(cachedDefaultVideo);
       setCurrentVideo(cachedDefaultVideo);
       const timer = setTimeout(() => {
-        const videoElement = document.querySelector('video');
+        const videoElement = document.querySelector("video");
         if (videoElement) {
           videoElement.muted = true;
-          videoElement.play().catch((error) => console.log('Autoplay prevented:', error));
+          videoElement
+            .play()
+            .catch((error) => console.log("Autoplay prevented:", error));
         }
       }, 100);
       return () => clearTimeout(timer);
     } else {
       setVideoInfo({
-        videoLink: "https://videos.pexels.com/video-files/10024586/10024586-uhd_3242_2160_24fps.mp4",
+        videoLink:
+          "https://videos.pexels.com/video-files/10024586/10024586-uhd_3242_2160_24fps.mp4",
         user: "taro",
         url: "https://www.pexels.com/@taro-raptus/",
-        shouldAutoplay: true
+        shouldAutoplay: true,
       });
     }
   }, []);
@@ -64,16 +69,16 @@ const VideoBackground = () => {
 
   // Fetch video based on theme or query
   const findVid = async (query: number | string) => {
-    if (typeof query === 'string') {
+    if (typeof query === "string") {
       setVideoInfo({
         videoLink: query,
         user: "Trevor Farias",
-        url: "https://archive.org/details/@trevorof"
+        url: "https://archive.org/details/@trevorof",
       });
       setCurrentVideo({
         videoLink: query,
         user: "Trevor Farias",
-        url: "https://archive.org/details/@trevorof"
+        url: "https://archive.org/details/@trevorof",
       });
       return;
     }
@@ -83,13 +88,13 @@ const VideoBackground = () => {
       setVideoInfo({
         videoLink: cached.videoLink,
         user: cached.user,
-        url: cached.url
+        url: cached.url,
       });
       setCurrentVideo(cached);
       return;
     }
 
-    console.log('No cache found, making API request');
+    console.log("No cache found, making API request");
     const video = await fetchVideo({ query });
 
     setVideoInfo(video);
@@ -110,7 +115,11 @@ const VideoBackground = () => {
         setTime((prev) => ({ ...prev, [name]: value }));
         setInputError(null);
       } else {
-        setInputError(name === "HH" ? "Hours must be between 0-23" : "Minutes/Seconds must be between 0-59");
+        setInputError(
+          name === "HH"
+            ? "Hours must be between 0-23"
+            : "Minutes/Seconds must be between 0-59"
+        );
       }
     }
   };
@@ -123,7 +132,9 @@ const VideoBackground = () => {
       const s = parseInt(time.SS) || 0;
 
       if (h > 23 || m > 59 || s > 59) {
-        setInputError("Invalid time values. Hours: 0-23, Minutes/Seconds: 0-59");
+        setInputError(
+          "Invalid time values. Hours: 0-23, Minutes/Seconds: 0-59"
+        );
         return;
       }
 
@@ -132,8 +143,6 @@ const VideoBackground = () => {
       setInputError(null);
     }
   };
-
-
 
   return (
     <div className="relative flex flex-col min-h-screen w-full">
@@ -147,7 +156,9 @@ const VideoBackground = () => {
             playsInline
             className="absolute inset-0 w-full h-full object-cover -z-10"
             onLoadedMetadata={(e) => {
-              e.currentTarget.play().catch((e) => console.log('Autoplay error:', e));
+              e.currentTarget
+                .play()
+                .catch((e) => console.log("Autoplay error:", e));
             }}
           >
             <source src={videoInfo.videoLink} type="video/mp4" />
@@ -155,34 +166,79 @@ const VideoBackground = () => {
         )}
 
         {popUp && (
-            <div className="fixed inset-0 flex items-center justify-center backdrop-blur-md bg-black/50 z-10">
-              <div className="relative bg-black p-6 rounded-lg shadow-lg w-[300px]">
-                <button
-                  onClick={() => setPopUp(false)}
-                  className="absolute top-2 right-2 text-white text-xl hover:text-red-500 transition cursor-pointer"
-                  aria-label="Close"
-                >
-                  &times;
-                </button>
-          
+          <div className="fixed inset-0 flex items-center justify-center backdrop-blur-md bg-black/50 z-10">
+            <div className="relative bg-black p-6 rounded-lg shadow-lg w-[300px]">
+              <button
+                onClick={() => setPopUp(false)}
+                className="absolute top-2 right-2 text-white text-xl hover:text-red-500 transition cursor-pointer"
+                aria-label="Close"
+              >
+                &times;
+              </button>
+
               <div className="flex flex-col items-center gap-4">
                 <div className="flex space-x-2">
-                  {["HH", "MM", "SS"].map((unit, idx) => (
-                    <input
+                  {(["HH", "MM", "SS"] as const).map((unit, idx) => (
+                    <div
                       key={unit}
-                      type="text"
-                      name={unit}
-                      value={time[unit as keyof typeof time]}
-                      onChange={handleChange}
-                      onKeyDown={handleKeyDown}
-                      placeholder={unit.toUpperCase()}
-                      className="w-12 text-center border rounded text-white"
-                      ref={idx === 1 ? minutesRef : null}
-                      maxLength={2}
-                    />
+                      className="flex flex-col items-center space-y-2"
+                    >
+                      <input
+                        name={unit}
+                        value={time[unit]}
+                        onChange={handleChange}
+                        onKeyDown={handleKeyDown}
+                        placeholder={unit}
+                        className="w-12 text-center border border-gray-400 rounded bg-gray-900 text-white select-none cursor-ns-resize transition-transform duration-150"
+                        ref={idx === 1 ? minutesRef : null}
+                        maxLength={2}
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          const startY = e.clientY;
+                          const initialValue = parseInt(time[unit]) || 0;
+                          const max = unit === "HH" ? 23 : 59;
+                          const min = 0;
+                          const inputEl = e.currentTarget;
+
+                          const handleMouseMove = (e: MouseEvent) => {
+                            const deltaY = e.clientY - startY;
+                            inputEl.style.transform = `translateY(${deltaY}px)`;
+
+                            const deltaSteps = Math.floor(-deltaY / 5); // 5px per unit
+                            let newValue = initialValue + deltaSteps;
+                            newValue = Math.max(min, Math.min(max, newValue));
+
+                            setTime((prev) => ({
+                              ...prev,
+                              [unit]: newValue.toString().padStart(2, "0"),
+                            }));
+                          };
+
+                          const handleMouseUp = () => {
+                            inputEl.style.transform = ""; // reset position
+                            document.removeEventListener(
+                              "mousemove",
+                              handleMouseMove
+                            );
+                            document.removeEventListener(
+                              "mouseup",
+                              handleMouseUp
+                            );
+                          };
+
+                          document.addEventListener(
+                            "mousemove",
+                            handleMouseMove
+                          );
+                          document.addEventListener("mouseup", handleMouseUp);
+                        }}
+                      />
+                    </div>
                   ))}
                 </div>
-                {inputError && <div className="text-red-500 text-sm mt-2">{inputError}</div>}
+                {inputError && (
+                  <div className="text-red-500 text-sm mt-2">{inputError}</div>
+                )}
               </div>
 
               <button
@@ -192,7 +248,9 @@ const VideoBackground = () => {
                   const s = parseInt(time.SS) || 0;
 
                   if (h > 23 || m > 59 || s > 59) {
-                    setInputError("Invalid time values. Hours: 0-23, Minutes/Seconds: 0-59");
+                    setInputError(
+                      "Invalid time values. Hours: 0-23, Minutes/Seconds: 0-59"
+                    );
                     return;
                   }
 
@@ -209,25 +267,46 @@ const VideoBackground = () => {
         )}
 
         {themePopup && (
-          <ThemePopup findVid={findVid} themes={themes} onClose={() => setThemePopup(false)} currentVideo={currentVideo} />
+          <ThemePopup
+            findVid={findVid}
+            themes={themes}
+            onClose={() => setThemePopup(false)}
+            currentVideo={currentVideo}
+          />
         )}
 
-        {!isRunning && (<div className="flex flex-col z-10 top-4 right-4 absolute text-3xl text-white gap-4">
-          <button onClick={() => setThemePopup(true)} className="bg-black/50 px-4 py-2 rounded-lg hover:opacity-45 cursor-pointer">Theme</button>
-          <button onClick={() => setPopUp(true)} className="bg-black/50 px-4 py-2 rounded-lg hover:opacity-45 cursor-pointer">Time</button>
-          <button
-            onClick={() => {
-              setDuration(duration);
-              setResetCount((prev) => prev + 1);
-            }}
-            className="bg-black/50 px-4 py-2 rounded-lg hover:opacity-45 cursor-pointer"
-          >
-            Reset
-          </button>
-        </div>)}
+        {!isRunning && (
+          <div className="flex flex-col z-10 top-4 right-4 absolute text-3xl text-white gap-4">
+            <button
+              onClick={() => setThemePopup(true)}
+              className="bg-black/50 px-4 py-2 rounded-lg hover:opacity-45 cursor-pointer"
+            >
+              Theme
+            </button>
+            <button
+              onClick={() => setPopUp(true)}
+              className="bg-black/50 px-4 py-2 rounded-lg hover:opacity-45 cursor-pointer"
+            >
+              Time
+            </button>
+            <button
+              onClick={() => {
+                setDuration(duration);
+                setResetCount((prev) => prev + 1);
+              }}
+              className="bg-black/50 px-4 py-2 rounded-lg hover:opacity-45 cursor-pointer"
+            >
+              Reset
+            </button>
+          </div>
+        )}
 
         <div className="absolute inset-0 flex items-center justify-center">
-          <Timer key={`${duration}-${resetCount}`} duration={duration} onRunningChange={setIsRunning}/>
+          <Timer
+            key={`${duration}-${resetCount}`}
+            duration={duration}
+            onRunningChange={setIsRunning}
+          />
         </div>
       </div>
 
