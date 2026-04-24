@@ -4,11 +4,12 @@ import { useEffect, useState } from "react";
 interface TimerProps {
   duration: number;
   onRunningChange?: (running: boolean) => void;
+  onEditRequest?: () => void;
 }
 
-const Timer = ({ duration, onRunningChange }: TimerProps) => {
+const Timer = ({ duration, onRunningChange, onEditRequest }: TimerProps) => {
   const [timeLeft, setTimeLeft] = useState(duration);
-  const [isRunning, setIsRunning] = useState(true);
+  const [isRunning, setIsRunning] = useState(false);
 
   useEffect(() => {
     setTimeLeft(duration);
@@ -16,29 +17,26 @@ const Timer = ({ duration, onRunningChange }: TimerProps) => {
   }, [duration]);
 
   useEffect(() => {
-    // Inform parent of state change
-    if (onRunningChange) {
-      onRunningChange(isRunning);
-    }
+    onRunningChange?.(isRunning);
   }, [isRunning, onRunningChange]);
 
   useEffect(() => {
-    if (!isRunning || timeLeft <= 0){ 
-      setIsRunning(false);
+    if (!isRunning || timeLeft <= 0) {
+      if (timeLeft <= 0) setIsRunning(false);
       return;
     }
-
-    const timer = setInterval(() => {
-      setTimeLeft((prev) => Math.max(prev - 1, 0));
-    }, 1000);
-
-    return () => clearInterval(timer);
+    const id = setInterval(() => setTimeLeft((prev) => Math.max(prev - 1, 0)), 1000);
+    return () => clearInterval(id);
   }, [isRunning, timeLeft]);
 
-  const formatTime = (duration: number) => {
-    const minutes = Math.floor(duration / 60);
-    const seconds = duration % 60;
-    return `${minutes}:${seconds < 10 ? "0" : ""}${seconds}`;
+  const formatTime = (secs: number) => {
+    const h = Math.floor(secs / 3600);
+    const m = Math.floor((secs % 3600) / 60);
+    const s = secs % 60;
+    if (h > 0) {
+      return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+    }
+    return `${m}:${String(s).padStart(2, "0")}`;
   };
 
   const radius = 90;
@@ -48,25 +46,16 @@ const Timer = ({ duration, onRunningChange }: TimerProps) => {
   return (
     <button
       className="relative flex items-center justify-center cursor-pointer w-[240px] h-[240px] rounded-full bg-black/50 hover:opacity-50"
-      onClick={() => timeLeft == 0 ? () => {}: setIsRunning((prev) => !prev)}
+      onClick={() => { if (timeLeft > 0) setIsRunning((prev) => !prev); else onEditRequest?.(); }}
     >
       <svg width="240" height="240" viewBox="0 0 200 200" className="absolute">
         <circle
-          cx="100"
-          cy="100"
-          r={radius}
-          fill="none"
-          stroke="gray"
-          strokeWidth="6"
-          opacity="0.3"
+          cx="100" cy="100" r={radius}
+          fill="none" stroke="gray" strokeWidth="6" opacity="0.3"
         />
         <circle
-          cx="100"
-          cy="100"
-          r={radius}
-          fill="none"
-          stroke="white"
-          strokeWidth="6"
+          cx="100" cy="100" r={radius}
+          fill="none" stroke="white" strokeWidth="6"
           strokeDasharray={circumference}
           strokeDashoffset={progress}
           strokeLinecap="round"
@@ -74,7 +63,6 @@ const Timer = ({ duration, onRunningChange }: TimerProps) => {
           className="transition-all duration-1000 ease-linear"
         />
       </svg>
-
       <p className="text-5xl text-white">{formatTime(timeLeft)}</p>
     </button>
   );

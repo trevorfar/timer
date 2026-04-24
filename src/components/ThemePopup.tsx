@@ -1,137 +1,91 @@
 "use client";
-import { PexelApi } from "@/utils/fetch";
-import { defaultVideoCache } from "@/utils/videoCache";
-import React, { useState } from "react";
+import { useState } from "react";
+import type { Theme } from "@/utils/types";
 
-type Theme = {
-  name: string;
-  id: number;
-  directLink?: string;
-};
+const ITEMS_PER_PAGE = 6;
 
 interface ThemePopupProps {
   themes: Theme[];
-  findVid: (query: number | string) => void; // Updated to accept string for direct links
+  currentThemeIndex: number;
+  onSelect: (index: number) => void;
+  onSetDefault: () => void;
   onClose: () => void;
-  currentVideo: PexelApi;
 }
 
-const ITEMS = 6;
+const ThemePopup = ({
+  themes,
+  currentThemeIndex,
+  onSelect,
+  onSetDefault,
+  onClose,
+}: ThemePopupProps) => {
+  const [page, setPage] = useState(1);
+  const totalPages = Math.ceil(themes.length / ITEMS_PER_PAGE);
+  const pageThemes = themes.slice(
+    (page - 1) * ITEMS_PER_PAGE,
+    page * ITEMS_PER_PAGE
+  );
 
-const ThemePopup = ({ findVid, themes, onClose, currentVideo }: ThemePopupProps) => {
-  const handleSetDefault = () => {
-    if (currentVideo.videoLink) {
-      defaultVideoCache.set({
-        ...currentVideo,
-        shouldAutoplay: true 
-      });
-    }
-  };
-  
-  const [currentPage, setCurrentPage] = useState(1);
-  const [selectedThemeId, setSelectedThemeId] = useState<number | string | null>(null);
-
-  const handleThemeClick = (theme: Theme) => {
-    if (theme.directLink && theme.directLink !== selectedThemeId) {
-      setSelectedThemeId(theme.directLink);
-      findVid(theme.directLink); // Pass the direct link string
-    } else if (theme.id !== selectedThemeId) {
-      setSelectedThemeId(theme.id);
-      findVid(theme.id); // Pass the numeric ID as before
-    }
-  };
-
-  const totalPages = Math.ceil(themes.length / ITEMS);
-  const startIndex = (currentPage - 1) * ITEMS;
-  const paginatedThemes = themes.slice(startIndex, startIndex + ITEMS);
-
-  const shuffleTheme = () => {
-    if (themes.length === 0) return;
-  
-    // Filter out the currently selected theme so we don’t repeat
-    const availableThemes = themes.filter((theme) =>
-      theme.directLink
-        ? theme.directLink !== selectedThemeId
-        : theme.id !== selectedThemeId
-    );
-  
-    const randomIndex = Math.floor(Math.random() * availableThemes.length);
-    const randomTheme = availableThemes[randomIndex];
-  
-    handleThemeClick(randomTheme);
+  const shuffle = () => {
+    const candidates = themes.map((_, i) => i).filter((i) => i !== currentThemeIndex);
+    onSelect(candidates[Math.floor(Math.random() * candidates.length)]);
   };
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center backdrop-blur-md bg-black/50 z-15">
-      <div className="bg-black p-6 rounded-lg shadow-lg relative w-80">
+    <div className="fixed inset-0 flex items-center justify-center backdrop-blur-md bg-black/50 z-10">
+      <div className="bg-black p-6 rounded-xl shadow-lg relative w-80">
         <button
-          className="absolute top-2 right-2 text-white bg-gray-800 rounded-2xl p-2 cursor-pointer hover:opacity-50"
-          onClick={(e) => {
-            e.stopPropagation();
-            onClose();
-          }}
+          onClick={onClose}
+          className="absolute top-3 right-3 text-white bg-gray-800 rounded-full w-7 h-7 flex items-center justify-center hover:opacity-60 cursor-pointer"
         >
           ✕
         </button>
-       
-        <div className="flex flex-col gap-2 p-4 cursor-pointer">
-        
-          {paginatedThemes.map((theme) => (
-            
-            <button
-              key={theme.id}
-              onClick={() => handleThemeClick(theme)}
-              className={`bg-gray-700 text-white px-4 py-2 rounded cursor-pointer hover:opacity-50 ${
-                (theme.directLink && selectedThemeId === theme.directLink) || 
-                (!theme.directLink && selectedThemeId === theme.id)
-                  ? "ring-2 ring-blue-500"
-                  : ""
-              }`}
-            >
-              {theme.name}
-            </button>
-          ))}
+
+        <div className="flex flex-col gap-2 mt-2 mb-4">
+          {pageThemes.map((theme, pageIdx) => {
+            const globalIdx = (page - 1) * ITEMS_PER_PAGE + pageIdx;
+            return (
+              <button
+                key={`${theme.id}-${theme.directLink ?? ""}`}
+                onClick={() => onSelect(globalIdx)}
+                className={`bg-gray-800 text-white px-4 py-2 rounded-lg hover:opacity-70 cursor-pointer text-left transition-opacity ${
+                  globalIdx === currentThemeIndex ? "ring-2 ring-blue-500" : ""
+                }`}
+              >
+                {theme.name}
+              </button>
+            );
+          })}
         </div>
-        <div className="flex flex-col items-center justify-center gap-1">
-        {currentVideo && (
+
+        <div className="flex flex-col gap-2">
           <button
-            onClick={handleSetDefault}
-            className="w-full py-2 bg-blue-600 text-white rounded hover:bg-blue-500 cursor-pointer"
+            onClick={onSetDefault}
+            className="w-full py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-500 cursor-pointer"
           >
-            Set Current Video as Default
+            Set as Default
           </button>
-          
-        )}
-        <button onClick={() => shuffleTheme()}className="bg-gray-700 text-white px-4 py-2 rounded cursor-pointer hover:opacity-50 w-2/3 justify-center items-center">
-          Shuffle
-        </button>
-        </div>
-        <div className="flex justify-between mt-4">
           <button
-            className={`px-3 py-1 text-white bg-gray-800 rounded ${
-              currentPage === 1
-                ? "opacity-50 cursor-not-allowed"
-                : "hover:bg-gray-700 cursor-pointer"
-            }`}
-            onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-            disabled={currentPage === 1}
+            onClick={shuffle}
+            className="w-full py-2 bg-gray-700 text-white rounded-lg hover:opacity-70 cursor-pointer"
+          >
+            Shuffle
+          </button>
+        </div>
+
+        <div className="flex justify-between items-center mt-4">
+          <button
+            onClick={() => setPage((p) => Math.max(p - 1, 1))}
+            disabled={page === 1}
+            className="px-3 py-1 text-white bg-gray-800 rounded disabled:opacity-40 hover:opacity-70 cursor-pointer disabled:cursor-not-allowed"
           >
             ◀ Prev
           </button>
-          <span className="text-white">
-            {currentPage} / {totalPages}
-          </span>
-
+          <span className="text-white text-sm">{page} / {totalPages}</span>
           <button
-            className={`px-3 py-1 text-white bg-gray-800 rounded ${
-              currentPage === totalPages
-                ? "opacity-50 cursor-not-allowed"
-                : "hover:bg-gray-700 cursor-pointer"
-            }`}
-            onClick={() =>
-              setCurrentPage((prev) => Math.min(prev + 1, totalPages))
-            }
-            disabled={currentPage === totalPages}
+            onClick={() => setPage((p) => Math.min(p + 1, totalPages))}
+            disabled={page === totalPages}
+            className="px-3 py-1 text-white bg-gray-800 rounded disabled:opacity-40 hover:opacity-70 cursor-pointer disabled:cursor-not-allowed"
           >
             Next ▶
           </button>

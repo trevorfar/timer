@@ -1,55 +1,22 @@
 import axios from "axios";
+import type { VideoInfo } from "./types";
 
-export type PexelApi = {
-  videoLink: string | null;
-  user: string | null;
-  url: string | null;
-  timeStamp?: number;
-  shouldAutoplay?: boolean;
-}
-export const fetchVideo = async ({ query }: { query: number }): Promise<PexelApi> => {
+export const fetchVideo = async (id: number): Promise<VideoInfo | null> => {
   try {
-    const PEXELS_API_KEY = process.env.NEXT_PUBLIC_PEXELS_API_KEY;
-    const response = await axios.get(
-      `https://api.pexels.com/videos/videos/${query}`,
-      {
-        headers: { Authorization: PEXELS_API_KEY },
-      }
-    );
+    const { data } = await axios.get(`https://api.pexels.com/videos/videos/${id}`, {
+      headers: { Authorization: process.env.NEXT_PUBLIC_PEXELS_API_KEY },
+    });
 
-    console.log("Full API Response:", response.data);
+    if (!data?.video_files?.length) return null;
 
-    if (
-      !response.data ||
-      !response.data.video_files ||
-      response.data.video_files.length === 0
-    ) {
-      console.error("No video files found for this ID.");
-      return {
-        videoLink: null,
-        user: null,
-        url: null
-      };
-    }
-   
-    const bestVideo = response.data.video_files.find(
-      (video: { width: number; file_type: string; }) =>
-        video.width >= 1920 &&
-        video.file_type === "video/mp4"
-    ) || response.data.video_files[0];
+    const best =
+      data.video_files.find(
+        (v: { width: number; file_type: string }) =>
+          v.width >= 1920 && v.file_type === "video/mp4"
+      ) ?? data.video_files[0];
 
-    return {
-      videoLink: bestVideo.link,
-      user: response.data.user.name,
-      url: response.data.user.url
-    }
-    
-  } catch (error) {
-    console.error("Error fetching video:", error);
-    return {
-      videoLink: null,
-      user: null,
-      url: null
-    };
+    return { videoLink: best.link, user: data.user.name, url: data.user.url };
+  } catch {
+    return null;
   }
 };

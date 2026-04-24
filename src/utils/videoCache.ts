@@ -1,83 +1,49 @@
-import { PexelApi } from "./fetch";
+import type { VideoInfo } from "./types";
 
-type CachedVideo = {
-  videoLink: string;
-  user: string;
-  url: string;
-  timestamp: number;
-};
+const CACHE_EXPIRY = 24 * 60 * 60 * 1000;
 
-type VideoCache = {
-  [id: number]: CachedVideo;
-};
-
-const CACHE_EXPIRY = 24 * 60 * 60 * 1000; // 24 hours
+type CacheEntry = VideoInfo & { timestamp: number };
 
 export const videoCache = {
-  get cache(): VideoCache {
-    if (typeof window !== 'undefined') {
-      try {
-        const cache = localStorage.getItem('videoCache');
-        console.log('Loaded cache from localStorage:', cache);
-        return cache ? JSON.parse(cache) : {};
-      } catch (error) {
-        console.error('Error reading cache:', error);
-        return {};
+  get(id: number): VideoInfo | null {
+    if (typeof window === "undefined") return null;
+    try {
+      const cache: Record<number, CacheEntry> = JSON.parse(
+        localStorage.getItem("videoCache") ?? "{}"
+      );
+      const entry = cache[id];
+      if (entry && Date.now() - entry.timestamp < CACHE_EXPIRY) {
+        return { videoLink: entry.videoLink, user: entry.user, url: entry.url };
       }
-    }
-    return {};
-  },
-
-  get(id: number): CachedVideo | null {
-    const item = this.cache[id];
-    console.log('Checking cache for ID:', id, 'Found:', item);
-    if (item && Date.now() - item.timestamp < CACHE_EXPIRY) {
-      return item;
+    } catch {
+      /* ignore */
     }
     return null;
   },
 
-  set(id: number, data: PexelApi) {
-    if (!data.videoLink || !data.user || !data.url) {
-      console.warn('Not caching incomplete data for ID:', id);
-      return;
-    }
-
+  set(id: number, data: VideoInfo) {
+    if (typeof window === "undefined") return;
     try {
-      const cache = this.cache;
-      cache[id] = {
-        videoLink: data.videoLink,
-        user: data.user,
-        url: data.url,
-        timestamp: Date.now()
-      };
-      localStorage.setItem('videoCache', JSON.stringify(cache));
-      console.log('Saved to cache. New cache:', cache);
-    } catch (error) {
-      console.error('Error saving to cache:', error);
+      const cache: Record<number, CacheEntry> = JSON.parse(
+        localStorage.getItem("videoCache") ?? "{}"
+      );
+      cache[id] = { ...data, timestamp: Date.now() };
+      localStorage.setItem("videoCache", JSON.stringify(cache));
+    } catch {
+      /* ignore */
     }
-  }
+  },
 };
 
-// utils/videoCache.ts
-export const defaultVideoCache = {
-    get(): PexelApi | null {
-      if (typeof window !== 'undefined') {
-        const cached = localStorage.getItem('defaultVideo');
-        return cached ? JSON.parse(cached) : null;
-      }
-      return null;
-    },
-  
-    set(data: PexelApi) {
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('defaultVideo', JSON.stringify(data));
-      }
-    },
-  
-    clear() {
-      if (typeof window !== 'undefined') {
-        localStorage.removeItem('defaultVideo');
-      }
+export const defaultTheme = {
+  get(): number | null {
+    if (typeof window === "undefined") return null;
+    const val = localStorage.getItem("defaultThemeIndex");
+    return val !== null ? parseInt(val, 10) : null;
+  },
+  set(index: number) {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("defaultThemeIndex", String(index));
     }
-  };
+  },
+};
