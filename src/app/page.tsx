@@ -24,6 +24,30 @@ export default function App() {
   const [showTimePopup, setShowTimePopup] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement>(null);
+  const videoDimsRef = useRef<{ w: number; h: number } | null>(null);
+  const [useBars, setUseBars] = useState(true);
+
+  const computeFit = useCallback(() => {
+    if (!videoDimsRef.current) return;
+    const { w, h } = videoDimsRef.current;
+    const videoAR = w / h;
+    const screenAR = window.innerWidth / window.innerHeight;
+    // fillRatio: how much of the screen the video fills in contain mode (1 = perfect fit, 0.8 = 20% bars)
+    const fillRatio = Math.min(videoAR, screenAR) / Math.max(videoAR, screenAR);
+    setUseBars(fillRatio < 0.8);
+  }, []);
+
+  const handleLoadedMetadata = useCallback(() => {
+    const v = videoRef.current;
+    if (!v) return;
+    videoDimsRef.current = { w: v.videoWidth, h: v.videoHeight };
+    computeFit();
+  }, [computeFit]);
+
+  useEffect(() => {
+    window.addEventListener("resize", computeFit);
+    return () => window.removeEventListener("resize", computeFit);
+  }, [computeFit]);
 
   const loadTheme = useCallback(async (index: number) => {
     const theme = themes[index];
@@ -73,8 +97,9 @@ export default function App() {
             autoPlay
             muted
             playsInline
-            className="max-w-full max-h-full w-auto h-auto"
+            className={useBars ? "max-w-full max-h-full w-auto h-auto" : "w-full h-full object-cover"}
             onEnded={handleVideoEnded}
+            onLoadedMetadata={handleLoadedMetadata}
           >
             <source src={videoInfo.videoLink} type="video/mp4" />
           </video>
