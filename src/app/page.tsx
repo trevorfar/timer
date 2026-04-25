@@ -3,11 +3,13 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Timer from "@/components/Timer";
 import ThemePopup from "@/components/ThemePopup";
 import TimePopup from "@/components/TimePopup";
+import TaskPopup from "@/components/TaskPopup";
 import Footer from "@/components/Footer";
 import { fetchVideo } from "@/utils/fetch";
 import { videoCache, defaultTheme } from "@/utils/videoCache";
 import { themes, DEFAULT_THEME_INDEX } from "@/utils/themes";
-import type { VideoInfo } from "@/utils/types";
+import { taskStorage, activeTaskStorage } from "@/utils/taskStorage";
+import type { VideoInfo, Task } from "@/utils/types";
 
 const PLAYS_BEFORE_CYCLE = 5;
 
@@ -22,6 +24,12 @@ export default function App() {
 
   const [showThemePopup, setShowThemePopup] = useState(false);
   const [showTimePopup, setShowTimePopup] = useState(false);
+  const [showTaskPopup, setShowTaskPopup] = useState(false);
+
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
+  const [defaultThemeIndex, setDefaultThemeIndex] = useState<number | null>(null);
+  const tasksLoadedRef = useRef(false);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const videoDimsRef = useRef<{ w: number; h: number } | null>(null);
@@ -77,6 +85,89 @@ export default function App() {
     loadTheme(saved ?? DEFAULT_THEME_INDEX);
   }, [loadTheme]);
 
+  useEffect(() => {
+    setTasks(taskStorage.get());
+    setActiveTaskId(activeTaskStorage.get());
+    setDefaultThemeIndex(defaultTheme.get());
+    tasksLoadedRef.current = true;
+  }, []);
+
+  useEffect(() => {
+    if (tasksLoadedRef.current) taskStorage.set(tasks);
+  }, [tasks]);
+
+  useEffect(() => {
+    if (tasksLoadedRef.current) activeTaskStorage.set(activeTaskId);
+  }, [activeTaskId]);
+
+  useEffect(() => {
+    if (!isRunning || !activeTaskId) return;
+    const id = setInterval(() => {
+      setTasks((prev) =>
+        prev.map((t) =>
+          t.id === activeTaskId
+            ? { ...t, accumulatedSeconds: t.accumulatedSeconds + 1 }
+            : t
+        )
+      );
+    }, 1000);
+    return () => clearInterval(id);
+  }, [isRunning, activeTaskId]);
+
+  const addTask = useCallback((title: string, goalMinutes: number | undefined) => {
+    const newTask: Task = {
+      id: crypto.randomUUID(),
+      title,
+      goalSeconds: goalMinutes ? goalMinutes * 60 : undefined,
+      accumulatedSeconds: 0,
+      createdAt: Date.now(),
+    };
+    setTasks((prev) => [...prev, newTask]);
+    setActiveTaskId((prev) => {
+      if (prev) return prev;
+      if (newTask.goalSeconds) {
+        setDuration(newTask.goalSeconds);
+        setResetKey((k) => k + 1);
+      }
+      return newTask.id;
+    });
+  }, []);
+
+  const toggleTaskComplete = useCallback((id: string) => {
+    setTasks((prev) =>
+      prev.map((t) =>
+        t.id === id ? { ...t, completedAt: t.completedAt ? undefined : Date.now() } : t
+      )
+    );
+    setActiveTaskId((prev) => (prev === id ? null : prev));
+  }, []);
+
+  const deleteTask = useCallback((id: string) => {
+    setTasks((prev) => prev.filter((t) => t.id !== id));
+    setActiveTaskId((prev) => (prev === id ? null : prev));
+  }, []);
+
+  const selectTask = useCallback(
+    (id: string | null) => {
+      setActiveTaskId(id);
+      if (!id) return;
+      const task = tasks.find((t) => t.id === id);
+      if (task?.goalSeconds) {
+        const remaining = Math.max(task.goalSeconds - task.accumulatedSeconds, 0);
+        setDuration(remaining > 0 ? remaining : task.goalSeconds);
+        setResetKey((k) => k + 1);
+      }
+    },
+    [tasks]
+  );
+
+  const setDefaultThemeIdx = useCallback((index: number) => {
+    defaultTheme.set(index);
+    setDefaultThemeIndex(index);
+  }, []);
+
+  const activeTask = tasks.find((t) => t.id === activeTaskId) ?? null;
+
   const handleVideoEnded = useCallback(() => {
     const newCount = playCount + 1;
     if (newCount >= PLAYS_BEFORE_CYCLE) {
@@ -117,17 +208,33 @@ export default function App() {
         <ThemePopup
           themes={themes}
           currentThemeIndex={currentThemeIndex}
-          onSelect={(index) => {
-            loadTheme(index);
-            setShowThemePopup(false);
-          }}
-          onSetDefault={() => defaultTheme.set(currentThemeIndex)}
+          defaultThemeIndex={defaultThemeIndex}
+          onSelect={(index) => loadTheme(index)}
+          onSetDefault={setDefaultThemeIdx}
           onClose={() => setShowThemePopup(false)}
+        />
+      )}
+
+      {showTaskPopup && (
+        <TaskPopup
+          tasks={tasks}
+          activeTaskId={activeTaskId}
+          onSelect={selectTask}
+          onAdd={addTask}
+          onToggleComplete={toggleTaskComplete}
+          onDelete={deleteTask}
+          onClose={() => setShowTaskPopup(false)}
         />
       )}
 
       {!isRunning && (
         <div className="absolute top-4 right-4 flex flex-col gap-3 z-10">
+          <button
+            onClick={() => setShowTaskPopup(true)}
+            className="bg-black/50 text-white text-xl px-4 py-2 rounded-lg hover:opacity-60 cursor-pointer"
+          >
+            Tasks
+          </button>
           <button
             onClick={() => setShowThemePopup(true)}
             className="bg-black/50 text-white text-xl px-4 py-2 rounded-lg hover:opacity-60 cursor-pointer"
@@ -150,12 +257,22 @@ export default function App() {
       )}
 
       <div className="absolute inset-0 flex items-center justify-center">
-        <Timer
-          key={`${duration}-${resetKey}`}
-          duration={duration}
-          onRunningChange={setIsRunning}
-          onEditRequest={() => setShowTimePopup(true)}
-        />
+        <div className="relative">
+          {activeTask && (
+            <button
+              onClick={() => setShowTaskPopup(true)}
+              className="absolute -top-12 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-black/50 text-white text-sm whitespace-nowrap max-w-[280px] truncate hover:opacity-70 cursor-pointer"
+            >
+              Studying: {activeTask.title}
+            </button>
+          )}
+          <Timer
+            key={`${duration}-${resetKey}`}
+            duration={duration}
+            onRunningChange={setIsRunning}
+            onEditRequest={() => setShowTimePopup(true)}
+          />
+        </div>
       </div>
 
       <Footer user={videoInfo?.user || null} url={videoInfo?.url || null} />
