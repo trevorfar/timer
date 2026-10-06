@@ -16,8 +16,8 @@ export const themes: Theme[] = [
   { name: "Trippy Tunnel", id: 2759477 },
   { name: "Colorful Forest", id: 3217937 },
   { name: "Storm Castle", id: 4167691 },
-
-
 ];
 
 export const DEFAULT_THEME_INDEX = themes.findIndex((t) => t.id === 10024586);
+
+export const PLAYS_BEFORE_CYCLE = 5;

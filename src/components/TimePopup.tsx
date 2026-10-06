@@ -1,5 +1,8 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import Modal from "./Modal";
+
+const PRESET_MINUTES = [5, 15, 25, 45, 60];
 
 interface TimePopupProps {
   onSet: (seconds: number) => void;
@@ -23,49 +26,61 @@ const TimePopup = ({ onSet, onClose }: TimePopupProps) => {
     setError(null);
   };
 
-  const submit = () => {
-    const h = parseInt(time.HH, 10) || 0;
-    const m = parseInt(time.MM, 10) || 0;
-    const s = parseInt(time.SS, 10) || 0;
-    onSet(h * 3600 + m * 60 + s);
+  const total =
+    (parseInt(time.HH, 10) || 0) * 3600 +
+    (parseInt(time.MM, 10) || 0) * 60 +
+    (parseInt(time.SS, 10) || 0);
+
+  const apply = (seconds: number) => {
+    if (seconds <= 0) { setError("Enter a time greater than zero"); return; }
+    onSet(seconds);
     onClose();
   };
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center backdrop-blur-md bg-black/50 z-10">
-      <div className="relative bg-black p-6 rounded-xl shadow-lg w-72">
-        <button
-          onClick={onClose}
-          className="absolute top-3 right-3 text-white text-xl hover:text-red-400 cursor-pointer"
-        >
-          &times;
-        </button>
-        <div className="flex flex-col items-center gap-4 mt-2">
-          <div className="flex gap-3">
-            {(["HH", "MM", "SS"] as const).map((unit, i) => (
+    <Modal title="Set timer" onClose={onClose} className="max-w-sm">
+      <div className="flex flex-col gap-5 px-6 pb-6">
+        <div className="grid grid-cols-5 gap-2">
+          {PRESET_MINUTES.map((m) => (
+            <button
+              key={m}
+              onClick={() => apply(m * 60)}
+              className="cursor-pointer rounded-lg bg-white/5 py-2 text-sm text-white/80 transition-colors hover:bg-white/15 hover:text-white"
+            >
+              {m}m
+            </button>
+          ))}
+        </div>
+
+        <div className="flex items-center justify-center gap-2 text-white/40">
+          {(["HH", "MM", "SS"] as const).map((unit, i) => (
+            <div key={unit} className="flex items-center gap-2">
+              {i > 0 && <span className="text-xl">:</span>}
               <input
-                key={unit}
                 name={unit}
                 value={time[unit]}
                 onChange={handleChange}
-                onKeyDown={(e) => e.key === "Enter" && submit()}
+                onKeyDown={(e) => e.key === "Enter" && apply(total)}
                 placeholder={unit}
                 ref={i === 0 ? firstRef : null}
                 maxLength={2}
-                className="w-12 text-center border border-gray-600 rounded-lg bg-gray-900 text-white py-2"
+                inputMode="numeric"
+                className="w-14 rounded-lg border border-white/10 bg-white/5 py-2 text-center text-xl tabular-nums text-white placeholder-white/30 transition-colors focus:border-white/40 focus:outline-none"
               />
-            ))}
-          </div>
-          {error && <p className="text-red-400 text-sm">{error}</p>}
-          <button
-            onClick={submit}
-            className="px-6 py-2 bg-gray-800 text-white rounded-lg hover:opacity-70 cursor-pointer"
-          >
-            Set Timer
-          </button>
+            </div>
+          ))}
         </div>
+
+        {error && <p className="-mt-2 text-center text-sm text-red-400">{error}</p>}
+
+        <button
+          onClick={() => apply(total)}
+          className="cursor-pointer rounded-lg bg-white py-2 font-medium text-black transition-opacity hover:opacity-85"
+        >
+          Set timer
+        </button>
       </div>
-    </div>
+    </Modal>
   );
 };
 

@@ -1,34 +1,50 @@
 "use client";
 import { useEffect, useState } from "react";
-import type { Theme } from "@/utils/types";
+import type { CycleMode, Theme } from "@/utils/types";
 import { videoCache } from "@/utils/videoCache";
 import { fetchVideo } from "@/utils/fetch";
+import { PLAYS_BEFORE_CYCLE } from "@/utils/themes";
+import Modal from "./Modal";
+
+const MODES: { value: CycleMode; label: string; hint: string }[] = [
+  { value: "repeat", label: "Loop", hint: "Keep playing the selected theme forever." },
+  { value: "cycle", label: "Cycle", hint: `Move to the next theme every ${PLAYS_BEFORE_CYCLE} plays.` },
+  { value: "shuffle", label: "Shuffle", hint: `Jump to a random theme every ${PLAYS_BEFORE_CYCLE} plays.` },
+];
+
+type Preview = { video: string; image?: string };
 
 interface ThemePopupProps {
   themes: Theme[];
   currentThemeIndex: number;
+  pendingThemeIndex: number | null;
   defaultThemeIndex: number | null;
+  cycleMode: CycleMode;
   onSelect: (index: number) => void;
   onSetDefault: (index: number) => void;
+  onCycleModeChange: (mode: CycleMode) => void;
   onClose: () => void;
 }
 
 const ThemePopup = ({
   themes,
   currentThemeIndex,
+  pendingThemeIndex,
   defaultThemeIndex,
+  cycleMode,
   onSelect,
   onSetDefault,
+  onCycleModeChange,
   onClose,
 }: ThemePopupProps) => {
-  const [previews, setPreviews] = useState<Record<number, string>>(() => {
-    const initial: Record<number, string> = {};
+  const [previews, setPreviews] = useState<Record<number, Preview>>(() => {
+    const initial: Record<number, Preview> = {};
     themes.forEach((theme, i) => {
       if (theme.directLink) {
-        initial[i] = theme.directLink;
+        initial[i] = { video: theme.directLink };
       } else {
         const cached = videoCache.get(theme.id);
-        if (cached) initial[i] = cached.videoLink;
+        if (cached) initial[i] = { video: cached.videoLink, image: cached.image };
       }
     });
     return initial;
@@ -42,7 +58,7 @@ const ThemePopup = ({
       const v = await fetchVideo(theme.id);
       if (cancelled || !v) return;
       videoCache.set(theme.id, v);
-      setPreviews((prev) => ({ ...prev, [i]: v.videoLink }));
+      setPreviews((prev) => ({ ...prev, [i]: { video: v.videoLink, image: v.image } }));
     });
     return () => {
       cancelled = true;
@@ -50,91 +66,110 @@ const ThemePopup = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const shuffle = () => {
+  const random = () => {
     const candidates = themes.map((_, i) => i).filter((i) => i !== currentThemeIndex);
     onSelect(candidates[Math.floor(Math.random() * candidates.length)]);
   };
 
+  const activeMode = MODES.find((m) => m.value === cycleMode) ?? MODES[1];
+
   return (
-    <div className="fixed inset-0 flex items-center justify-center backdrop-blur-md bg-black/50 z-10">
-      <div className="relative bg-black rounded-xl shadow-lg w-[520px] max-h-[85vh] flex flex-col">
+    <Modal
+      title="Themes"
+      onClose={onClose}
+      className="max-w-xl"
+      actions={
         <button
-          onClick={onClose}
-          className="absolute top-3 right-3 text-white bg-gray-800 rounded-full w-7 h-7 flex items-center justify-center hover:opacity-60 cursor-pointer z-20"
-          aria-label="Close"
+          onClick={random}
+          className="cursor-pointer rounded-lg bg-white/5 px-3 py-1.5 text-sm text-white/80 transition-colors hover:bg-white/15 hover:text-white"
         >
-          ✕
+          Random
         </button>
-
-        <div className="flex items-center justify-between px-6 pt-5 pb-3">
-          <h2 className="text-white text-xl">Themes</h2>
-          <button
-            onClick={shuffle}
-            className="text-white bg-gray-800 rounded-lg px-3 py-1 text-sm hover:opacity-70 cursor-pointer mr-10"
-          >
-            Shuffle
-          </button>
+      }
+    >
+      <div className="px-6 pb-4">
+        <div className="grid grid-cols-3 gap-1 rounded-xl bg-white/5 p-1" role="radiogroup" aria-label="Theme playback">
+          {MODES.map((mode) => {
+            const active = mode.value === cycleMode;
+            return (
+              <button
+                key={mode.value}
+                role="radio"
+                aria-checked={active}
+                onClick={() => onCycleModeChange(mode.value)}
+                className={`cursor-pointer rounded-lg py-1.5 text-sm transition-colors ${
+                  active ? "bg-white text-black" : "text-white/70 hover:text-white"
+                }`}
+              >
+                {mode.label}
+              </button>
+            );
+          })}
         </div>
+        <p className="mt-2 text-xs text-white/50">{activeMode.hint}</p>
+      </div>
 
-        <div className="overflow-y-auto px-6 pb-6" style={{ scrollbarGutter: "stable" }}>
-          <div className="grid grid-cols-2 gap-3">
-            {themes.map((theme, i) => {
-              const isCurrent = i === currentThemeIndex;
-              const isDefault = i === defaultThemeIndex;
-              const preview = previews[i];
-              return (
-                <div
-                  key={`${theme.id}-${theme.directLink ?? ""}`}
-                  className={`relative rounded-lg overflow-hidden bg-gray-900 border-2 transition-colors ${
-                    isCurrent
-                      ? "border-blue-500"
-                      : "border-transparent hover:border-gray-600"
+      <div className="overflow-y-auto px-6 pb-6" style={{ scrollbarGutter: "stable" }}>
+        <div className="grid grid-cols-2 gap-3">
+          {themes.map((theme, i) => {
+            const isCurrent = i === currentThemeIndex;
+            const isPending = i === pendingThemeIndex;
+            const isDefault = i === defaultThemeIndex;
+            const preview = previews[i];
+            return (
+              <div
+                key={`${theme.id}-${theme.directLink ?? ""}`}
+                className={`group relative overflow-hidden rounded-xl bg-white/5 ring-2 transition-[box-shadow] duration-200 ${
+                  isCurrent ? "ring-white" : "ring-transparent hover:ring-white/30"
+                }`}
+              >
+                <button
+                  onClick={() => onSelect(i)}
+                  onMouseEnter={(e) => e.currentTarget.querySelector("video")?.play().catch(() => {})}
+                  onMouseLeave={(e) => e.currentTarget.querySelector("video")?.pause()}
+                  className="relative block aspect-video w-full cursor-pointer text-left focus-visible:outline-none"
+                >
+                  {preview ? (
+                    <video
+                      src={preview.image ? preview.video : `${preview.video}#t=1`}
+                      poster={preview.image}
+                      muted
+                      loop
+                      playsInline
+                      preload={preview.image ? "none" : "metadata"}
+                      className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    />
+                  ) : (
+                    <div className="absolute inset-0 animate-pulse bg-gradient-to-br from-white/10 to-white/0" />
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent" />
+                  {(isCurrent || isPending) && (
+                    <div className="absolute top-2 left-2 rounded-full bg-black/60 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-white">
+                      {isPending ? "Loading…" : "Playing"}
+                    </div>
+                  )}
+                  <div className="absolute right-10 bottom-2 left-3 truncate text-sm text-white drop-shadow">
+                    {theme.name}
+                  </div>
+                </button>
+                <button
+                  onClick={() => onSetDefault(i)}
+                  title={isDefault ? "Default theme" : "Set as default"}
+                  aria-label={isDefault ? "Default theme" : "Set as default"}
+                  className={`absolute right-2 bottom-2 flex h-7 w-7 cursor-pointer items-center justify-center rounded-full text-sm transition-colors ${
+                    isDefault
+                      ? "bg-yellow-400 text-black"
+                      : "bg-black/50 text-white/60 hover:bg-black/70 hover:text-yellow-300"
                   }`}
                 >
-                  <button
-                    onClick={() => onSelect(i)}
-                    className="block w-full aspect-video relative cursor-pointer text-left"
-                  >
-                    {preview ? (
-                      <video
-                        src={preview}
-                        muted
-                        playsInline
-                        preload="metadata"
-                        className="absolute inset-0 w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="absolute inset-0 bg-gradient-to-br from-gray-800 to-gray-950" />
-                    )}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent" />
-                    {isCurrent && (
-                      <div className="absolute top-2 left-2 bg-blue-500 text-white text-[10px] font-medium px-2 py-0.5 rounded uppercase tracking-wider">
-                        Playing
-                      </div>
-                    )}
-                    <div className="absolute bottom-2 left-2 right-10 text-white text-sm truncate drop-shadow">
-                      {theme.name}
-                    </div>
-                  </button>
-                  <button
-                    onClick={() => onSetDefault(i)}
-                    title={isDefault ? "Default theme" : "Pin as default"}
-                    aria-label={isDefault ? "Default theme" : "Pin as default"}
-                    className={`absolute bottom-2 right-2 w-7 h-7 rounded-full flex items-center justify-center cursor-pointer transition-colors ${
-                      isDefault
-                        ? "bg-yellow-500 text-black"
-                        : "bg-black/60 text-gray-300 hover:bg-black/80 hover:text-yellow-400"
-                    }`}
-                  >
-                    ★
-                  </button>
-                </div>
-              );
-            })}
-          </div>
+                  ★
+                </button>
+              </div>
+            );
+          })}
         </div>
       </div>
-    </div>
+    </Modal>
   );
 };
 

@@ -4,19 +4,25 @@ import Timer from "@/components/Timer";
 import ThemePopup from "@/components/ThemePopup";
 import TimePopup from "@/components/TimePopup";
 import TaskPopup from "@/components/TaskPopup";
+import VideoBackground from "@/components/VideoBackground";
 import Footer from "@/components/Footer";
 import { fetchVideo } from "@/utils/fetch";
-import { videoCache, defaultTheme } from "@/utils/videoCache";
-import { themes, DEFAULT_THEME_INDEX } from "@/utils/themes";
-import { taskStorage, activeTaskStorage } from "@/utils/taskStorage";
-import type { VideoInfo, Task } from "@/utils/types";
+import { videoCache } from "@/utils/videoCache";
+import { defaultTheme, cycleModeStorage } from "@/utils/settings";
+import { themes, DEFAULT_THEME_INDEX, PLAYS_BEFORE_CYCLE } from "@/utils/themes";
+import { taskStorage, activeTaskStorage, newTaskId } from "@/utils/taskStorage";
+import type { VideoInfo, Task, CycleMode } from "@/utils/types";
 
-const PLAYS_BEFORE_CYCLE = 5;
+const controlClass =
+  "cursor-pointer rounded-xl bg-black/40 px-4 py-2 text-white/90 backdrop-blur-sm transition-colors hover:bg-black/60 hover:text-white";
 
 export default function App() {
   const [videoInfo, setVideoInfo] = useState<VideoInfo | null>(null);
   const [currentThemeIndex, setCurrentThemeIndex] = useState(DEFAULT_THEME_INDEX);
-  const [playCount, setPlayCount] = useState(0);
+  const [pendingThemeIndex, setPendingThemeIndex] = useState<number | null>(null);
+  const [cycleMode, setCycleMode] = useState<CycleMode>("cycle");
+  const playCountRef = useRef(0);
+  const themeRequestRef = useRef(0);
 
   const [duration, setDuration] = useState(0);
   const [resetKey, setResetKey] = useState(0);
@@ -29,109 +35,86 @@ export default function App() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
   const [defaultThemeIndex, setDefaultThemeIndex] = useState<number | null>(null);
-  const tasksLoadedRef = useRef(false);
-
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const videoDimsRef = useRef<{ w: number; h: number } | null>(null);
-  const [useBars, setUseBars] = useState(true);
-
-  const computeFit = useCallback(() => {
-    if (!videoDimsRef.current) return;
-    const { w, h } = videoDimsRef.current;
-    const videoAR = w / h;
-    const screenAR = window.innerWidth / window.innerHeight;
-    // fillRatio: how much of the screen the video fills in contain mode (1 = perfect fit, 0.8 = 20% bars)
-    const fillRatio = Math.min(videoAR, screenAR) / Math.max(videoAR, screenAR);
-    setUseBars(fillRatio < 0.8);
-  }, []);
-
-  const handleLoadedMetadata = useCallback(() => {
-    const v = videoRef.current;
-    if (!v) return;
-    videoDimsRef.current = { w: v.videoWidth, h: v.videoHeight };
-    computeFit();
-  }, [computeFit]);
-
-  useEffect(() => {
-    window.addEventListener("resize", computeFit);
-    return () => window.removeEventListener("resize", computeFit);
-  }, [computeFit]);
+  // State (not a ref) so the persist effects can't run in the same commit as
+  // the initial load and overwrite saved tasks with the empty initial array.
+  const [storageLoaded, setStorageLoaded] = useState(false);
 
   const loadTheme = useCallback(async (index: number) => {
+    // Ignore responses from older requests so rapid clicks can't land on
+    // whichever fetch happened to resolve last.
+    const request = ++themeRequestRef.current;
+    playCountRef.current = 0;
     const theme = themes[index];
+    setPendingThemeIndex(index);
+
+    let video: VideoInfo | null = theme.directLink
+      ? { videoLink: theme.directLink, user: "", url: "" }
+      : videoCache.get(theme.id);
+    if (!video) {
+      video = await fetchVideo(theme.id);
+      if (video) videoCache.set(theme.id, video);
+    }
+
+    if (request !== themeRequestRef.current) return;
+    setPendingThemeIndex(null);
+    if (!video) return;
     setCurrentThemeIndex(index);
-    setPlayCount(0);
-
-    if (theme.directLink) {
-      setVideoInfo({ videoLink: theme.directLink, user: "", url: "" });
-      return;
-    }
-
-    const cached = videoCache.get(theme.id);
-    if (cached) {
-      setVideoInfo(cached);
-      return;
-    }
-
-    const video = await fetchVideo(theme.id);
-    if (video) {
-      videoCache.set(theme.id, video);
-      setVideoInfo(video);
-    }
+    setVideoInfo(video);
   }, []);
 
   useEffect(() => {
-    const saved = defaultTheme.get();
-    loadTheme(saved ?? DEFAULT_THEME_INDEX);
+    const savedDefault = defaultTheme.get();
+    setTasks(taskStorage.get());
+    setActiveTaskId(activeTaskStorage.get());
+    setDefaultThemeIndex(savedDefault);
+    setCycleMode(cycleModeStorage.get());
+    setStorageLoaded(true);
+    loadTheme(savedDefault ?? DEFAULT_THEME_INDEX);
   }, [loadTheme]);
 
   useEffect(() => {
-    setTasks(taskStorage.get());
-    setActiveTaskId(activeTaskStorage.get());
-    setDefaultThemeIndex(defaultTheme.get());
-    tasksLoadedRef.current = true;
+    if (storageLoaded) taskStorage.set(tasks);
+  }, [tasks, storageLoaded]);
+
+  useEffect(() => {
+    if (storageLoaded) activeTaskStorage.set(activeTaskId);
+  }, [activeTaskId, storageLoaded]);
+
+  const restartTimer = useCallback((seconds: number) => {
+    setDuration(seconds);
+    setResetKey((k) => k + 1);
   }, []);
 
-  useEffect(() => {
-    if (tasksLoadedRef.current) taskStorage.set(tasks);
-  }, [tasks]);
-
-  useEffect(() => {
-    if (tasksLoadedRef.current) activeTaskStorage.set(activeTaskId);
-  }, [activeTaskId]);
-
-  useEffect(() => {
-    if (!isRunning || !activeTaskId) return;
-    const id = setInterval(() => {
+  const handleElapsed = useCallback(
+    (seconds: number) => {
+      if (!activeTaskId) return;
       setTasks((prev) =>
         prev.map((t) =>
           t.id === activeTaskId
-            ? { ...t, accumulatedSeconds: t.accumulatedSeconds + 1 }
+            ? { ...t, accumulatedSeconds: t.accumulatedSeconds + seconds }
             : t
         )
       );
-    }, 1000);
-    return () => clearInterval(id);
-  }, [isRunning, activeTaskId]);
+    },
+    [activeTaskId]
+  );
 
-  const addTask = useCallback((title: string, goalMinutes: number | undefined) => {
-    const newTask: Task = {
-      id: crypto.randomUUID(),
-      title,
-      goalSeconds: goalMinutes ? goalMinutes * 60 : undefined,
-      accumulatedSeconds: 0,
-      createdAt: Date.now(),
-    };
-    setTasks((prev) => [...prev, newTask]);
-    setActiveTaskId((prev) => {
-      if (prev) return prev;
-      if (newTask.goalSeconds) {
-        setDuration(newTask.goalSeconds);
-        setResetKey((k) => k + 1);
-      }
-      return newTask.id;
-    });
-  }, []);
+  const addTask = useCallback(
+    (title: string, goalMinutes: number | undefined) => {
+      const newTask: Task = {
+        id: newTaskId(),
+        title,
+        goalSeconds: goalMinutes ? goalMinutes * 60 : undefined,
+        accumulatedSeconds: 0,
+        createdAt: Date.now(),
+      };
+      setTasks((prev) => [...prev, newTask]);
+      if (activeTaskId) return;
+      setActiveTaskId(newTask.id);
+      if (newTask.goalSeconds) restartTimer(newTask.goalSeconds);
+    },
+    [activeTaskId, restartTimer]
+  );
 
   const toggleTaskComplete = useCallback((id: string) => {
     setTasks((prev) =>
@@ -154,11 +137,10 @@ export default function App() {
       const task = tasks.find((t) => t.id === id);
       if (task?.goalSeconds) {
         const remaining = Math.max(task.goalSeconds - task.accumulatedSeconds, 0);
-        setDuration(remaining > 0 ? remaining : task.goalSeconds);
-        setResetKey((k) => k + 1);
+        restartTimer(remaining > 0 ? remaining : task.goalSeconds);
       }
     },
-    [tasks]
+    [tasks, restartTimer]
   );
 
   const setDefaultThemeIdx = useCallback((index: number) => {
@@ -166,40 +148,37 @@ export default function App() {
     setDefaultThemeIndex(index);
   }, []);
 
+  const changeCycleMode = useCallback((mode: CycleMode) => {
+    cycleModeStorage.set(mode);
+    setCycleMode(mode);
+    playCountRef.current = 0;
+  }, []);
+
   const activeTask = tasks.find((t) => t.id === activeTaskId) ?? null;
 
   const handleVideoEnded = useCallback(() => {
-    const newCount = playCount + 1;
-    if (newCount >= PLAYS_BEFORE_CYCLE) {
-      loadTheme((currentThemeIndex + 1) % themes.length);
+    if (cycleMode === "repeat") return;
+    playCountRef.current += 1;
+    if (playCountRef.current < PLAYS_BEFORE_CYCLE) return;
+    if (cycleMode === "shuffle") {
+      const others = themes.map((_, i) => i).filter((i) => i !== currentThemeIndex);
+      loadTheme(others[Math.floor(Math.random() * others.length)]);
     } else {
-      setPlayCount(newCount);
-      videoRef.current?.play();
+      loadTheme((currentThemeIndex + 1) % themes.length);
     }
-  }, [playCount, currentThemeIndex, loadTheme]);
+  }, [cycleMode, currentThemeIndex, loadTheme]);
 
   return (
-    <div className="relative flex flex-col min-h-screen w-full overflow-hidden">
-      {videoInfo?.videoLink && (
-        <div className="absolute inset-0 -z-10 bg-black flex items-center justify-center overflow-hidden">
-          <video
-            ref={videoRef}
-            key={videoInfo.videoLink}
-            autoPlay
-            muted
-            playsInline
-            className={useBars ? "max-w-full max-h-full w-auto h-auto" : "w-full h-full object-cover"}
-            onEnded={handleVideoEnded}
-            onLoadedMetadata={handleLoadedMetadata}
-          >
-            <source src={videoInfo.videoLink} type="video/mp4" />
-          </video>
-        </div>
-      )}
+    <div className="relative h-dvh w-full overflow-hidden">
+      <VideoBackground
+        link={videoInfo?.videoLink ?? null}
+        loop={cycleMode === "repeat"}
+        onEnded={handleVideoEnded}
+      />
 
       {showTimePopup && (
         <TimePopup
-          onSet={setDuration}
+          onSet={restartTimer}
           onClose={() => setShowTimePopup(false)}
         />
       )}
@@ -208,9 +187,12 @@ export default function App() {
         <ThemePopup
           themes={themes}
           currentThemeIndex={currentThemeIndex}
+          pendingThemeIndex={pendingThemeIndex}
           defaultThemeIndex={defaultThemeIndex}
-          onSelect={(index) => loadTheme(index)}
+          cycleMode={cycleMode}
+          onSelect={loadTheme}
           onSetDefault={setDefaultThemeIdx}
+          onCycleModeChange={changeCycleMode}
           onClose={() => setShowThemePopup(false)}
         />
       )}
@@ -227,41 +209,24 @@ export default function App() {
         />
       )}
 
-      {!isRunning && (
-        <div className="absolute top-4 right-4 flex flex-col gap-3 z-10">
-          <button
-            onClick={() => setShowTaskPopup(true)}
-            className="bg-black/50 text-white text-xl px-4 py-2 rounded-lg hover:opacity-60 cursor-pointer"
-          >
-            Tasks
-          </button>
-          <button
-            onClick={() => setShowThemePopup(true)}
-            className="bg-black/50 text-white text-xl px-4 py-2 rounded-lg hover:opacity-60 cursor-pointer"
-          >
-            Theme
-          </button>
-          <button
-            onClick={() => setShowTimePopup(true)}
-            className="bg-black/50 text-white text-xl px-4 py-2 rounded-lg hover:opacity-60 cursor-pointer"
-          >
-            Time
-          </button>
-          <button
-            onClick={() => setResetKey((k) => k + 1)}
-            className="bg-black/50 text-white text-xl px-4 py-2 rounded-lg hover:opacity-60 cursor-pointer"
-          >
-            Reset
-          </button>
-        </div>
-      )}
+      <div
+        inert={isRunning}
+        className={`absolute top-4 right-4 z-10 flex flex-col gap-2 transition-opacity duration-500 ${
+          isRunning ? "pointer-events-none opacity-0" : "opacity-100"
+        }`}
+      >
+        <button onClick={() => setShowTaskPopup(true)} className={controlClass}>Tasks</button>
+        <button onClick={() => setShowThemePopup(true)} className={controlClass}>Theme</button>
+        <button onClick={() => setShowTimePopup(true)} className={controlClass}>Time</button>
+        <button onClick={() => setResetKey((k) => k + 1)} className={controlClass}>Reset</button>
+      </div>
 
       <div className="absolute inset-0 flex items-center justify-center">
         <div className="relative">
           {activeTask && (
             <button
               onClick={() => setShowTaskPopup(true)}
-              className="absolute -top-12 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-black/50 text-white text-sm whitespace-nowrap max-w-[280px] truncate hover:opacity-70 cursor-pointer"
+              className="absolute -top-12 left-1/2 max-w-[280px] -translate-x-1/2 cursor-pointer truncate whitespace-nowrap rounded-full bg-black/40 px-4 py-1 text-sm text-white/90 backdrop-blur-sm transition-colors hover:bg-black/60 animate-fade-in"
             >
               Studying: {activeTask.title}
             </button>
@@ -270,6 +235,7 @@ export default function App() {
             key={`${duration}-${resetKey}`}
             duration={duration}
             onRunningChange={setIsRunning}
+            onElapsed={handleElapsed}
             onEditRequest={() => setShowTimePopup(true)}
           />
         </div>

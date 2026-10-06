@@ -13,7 +13,7 @@ export const videoCache = {
       );
       const entry = cache[id];
       if (entry && Date.now() - entry.timestamp < CACHE_EXPIRY) {
-        return { videoLink: entry.videoLink, user: entry.user, url: entry.url };
+        return { videoLink: entry.videoLink, user: entry.user, url: entry.url, image: entry.image };
       }
     } catch {
       /* ignore */
@@ -31,19 +31,6 @@ export const videoCache = {
       localStorage.setItem("videoCache", JSON.stringify(cache));
     } catch {
       /* ignore */
-    }
-  },
-};
-
-export const defaultTheme = {
-  get(): number | null {
-    if (typeof window === "undefined") return null;
-    const val = localStorage.getItem("defaultThemeIndex");
-    return val !== null ? parseInt(val, 10) : null;
-  },
-  set(index: number) {
-    if (typeof window !== "undefined") {
-      localStorage.setItem("defaultThemeIndex", String(index));
     }
   },
 };

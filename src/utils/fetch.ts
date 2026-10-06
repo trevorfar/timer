@@ -15,7 +15,7 @@ export const fetchVideo = async (id: number): Promise<VideoInfo | null> => {
           v.width >= 1920 && v.file_type === "video/mp4"
       ) ?? data.video_files[0];
 
-    return { videoLink: best.link, user: data.user.name, url: data.user.url };
+    return { videoLink: best.link, user: data.user.name, url: data.user.url, image: data.image };
   } catch {
     return null;
   }
